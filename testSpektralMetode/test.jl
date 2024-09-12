@@ -3,27 +3,23 @@ using Plots, LinearAlgebra
 
 function get_matrix(N, α, β, r)
 
-    off_diag = -1*ones(N-2)*(α+β)
+    β_array = ones(N).*(β./r[1:end])
+    
+    off_diag = -1*ones(N-2)*(α)
     diag = ones(N-1)*(1 + α)
 
-    off_diaglo = off_diag
-    off_diaglo[1:end] = off_diaglo[1:end]./r[2:N-1]
-
-
-
-
-    return Tridiagonal(off_diaglo, diag, off_diag./r[3:N])
+    return Tridiagonal(off_diag .+=β_array[2:end-1], diag, off_diag+=β_array[3:end])
 
 
 end
 
 function initialcondition(r)
 
-    return r.^2 .+3
+    return  r.^2 .+4
 
 end
 
-origoInterpolasjon(u) = (1/3)*(4*u[2] + u[3]) #må tilpasses for funksjoner som ikke er konstante for alle theta
+origoInterpolasjon(u) = (1/3)*(4*u[2] + u[3]) 
 
 #u_originLaplace(u, d_r) = u[2] - ((d_r^2)/4)*u[1] 
 
@@ -40,6 +36,8 @@ function initialilize(N, J, d_t, D)
     α = (D*d_t)/(d_r^2)
 
     β = (D*d_t)/(2*d_r)
+
+    println(α, " ", β)
 
     #γ = 4*(d_t^2)/(d_r^2*D^2)
 
@@ -62,11 +60,6 @@ function main(N, J, T, d_t, D)
     u[:, 1] = initialcondition(r)
 
 
-    A[end, end] *= 5
-
-    B[end, end] *= 5
-
-
     for i in 1:T-1
         u[2:end, i+1] = (A\B)*u[2:end, i]
 
@@ -80,11 +73,11 @@ end
 
 
 
-u , r, Θ = main(10, 10, 10, 1E-7, 1)
+u , r, Θ = main(100, 10, 10000, 1E-7, 1)
 
-print(u)
 
-plot(u[end, :])
+plot(u[:, 1])
+plot!(u[:, 20])
 
 
 
