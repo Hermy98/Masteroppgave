@@ -8,7 +8,7 @@ function get_matrix(N, α, β, r)
     off_diag = -1*ones(N-2)*(α)
     diag = ones(N-1)*(1 + α)
 
-    return Tridiagonal(off_diag .+=β_array[2:end-1], diag, off_diag+=β_array[3:end])
+    return Tridiagonal(off_diag .+ β_array[2:end-1], diag, off_diag .+β_array[3:end])
 
 
 end
