@@ -4,8 +4,9 @@ using Plots, LinearAlgebra
 function get_matrix(N, α, β, r)
 
     
-    off_diagup = -1*ones(N-2)*(α+β)
-    diag = ones(N-1)*(1 + α)
+    off_diagup = -1*ones(N-2)*(α-β)
+    diag = ones(N-1)*(1 + 2α)
+    off_diaglo = -1*ones(N-2)*(α+β)
 
     M = Tridiagonal(off_diag, diag, off_diag)
 

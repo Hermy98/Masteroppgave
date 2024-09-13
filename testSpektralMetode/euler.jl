@@ -9,11 +9,10 @@ function euler_matrix(N, α, β, r)
 
     beta_array = β*ones(N)./r[1:end]
 
-    print(beta_array)
 
-    off_diaglo = off_diag .- β #.- beta_array[2:end-1]
+    off_diaglo = off_diag .-β #.- beta_array[2:end-1]
 
-    off_diagup = off_diag .+ β #.+ beta_array[3:end]
+    off_diagup = off_diag  .+ β #.+ beta_array[3:end]
 
     A = Tridiagonal(off_diaglo, diag, off_diagup)
 
@@ -85,9 +84,7 @@ function run(N, J, T, d_t, D)
 
 end
 
-u = run(100, 10, 10000000, 1E-7, 1)
+u = run(100, 10, 1000000, 1E-5, 1)
 
 plot(u[:, 1])
-plot!(u[:, 5])
-plot!(u[:, 1000])
-plot!(u[:, end])
+plot!(u[:, 500])
