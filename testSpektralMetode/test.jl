@@ -3,12 +3,18 @@ using Plots, LinearAlgebra
 
 function get_matrix(N, α, β, r)
 
-    β_array = ones(N).*(β./r[1:end])
     
-    off_diag = -1*ones(N-2)*(α)
+    off_diagup = -1*ones(N-2)*(α+β)
     diag = ones(N-1)*(1 + α)
 
-    return Tridiagonal(off_diag .+ β_array[2:end-1], diag, off_diag .+β_array[3:end])
+    M = Tridiagonal(off_diag, diag, off_diag)
+
+    M[end, end] = 1
+    M[end, end-1] = 0
+
+
+
+    return M
 
 
 end
@@ -19,7 +25,7 @@ function initialcondition(r)
 
 end
 
-origoInterpolasjon(u) = (1/3)*(4*u[2] + u[3]) 
+origoInterpolasjon(u) = (1/3)*(4*u[2] - u[3]) 
 
 #u_originLaplace(u, d_r) = u[2] - ((d_r^2)/4)*u[1] 
 
@@ -36,8 +42,6 @@ function initialilize(N, J, d_t, D)
     α = (D*d_t)/(d_r^2)
 
     β = (D*d_t)/(2*d_r)
-
-    println(α, " ", β)
 
     #γ = 4*(d_t^2)/(d_r^2*D^2)
 
