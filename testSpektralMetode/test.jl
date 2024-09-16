@@ -8,11 +8,7 @@ function get_matrix(N, α, β, r)
     diag = ones(N-1)*(1 + 2α)
     off_diaglo = -1*ones(N-2)*(α+β)
 
-    M = Tridiagonal(off_diag, diag, off_diag)
-
-    M[end, end] = 1
-    M[end, end-1] = 0
-
+    M = Tridiagonal(off_diaglo, diag, off_diagup)
 
 
     return M
@@ -50,6 +46,17 @@ function initialilize(N, J, d_t, D)
 
     B = get_matrix(N, -α, -β, r)
 
+    #setting the boundary conditions
+
+    A[1,2] = -2*α
+    B[1,2] = 2*α
+
+    A[end, end] = 1
+    A[end, end-1] = 0
+
+    B[end, end] = 1
+    B[end, end-1] = 0
+
     return r, Θ, A, B, d_r
 
 
@@ -78,11 +85,11 @@ end
 
 
 
-u , r, Θ = main(100, 10, 10000, 1E-7, 1)
+u , r, Θ = main(100, 10, 10000, 1E-3, 1)
 
 
 plot(u[:, 1])
-plot!(u[:, 20])
+plot!(u[:, 100])
 
 
 

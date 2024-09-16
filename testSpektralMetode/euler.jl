@@ -7,9 +7,6 @@ function euler_matrix(N, α, β, r)
 
     off_diag = ones(N-2)*(α)
 
-    beta_array = β*ones(N)./r[1:end]
-
-
     off_diaglo = off_diag .-β #.- beta_array[2:end-1]
 
     off_diagup = off_diag  .+ β #.+ beta_array[3:end]
