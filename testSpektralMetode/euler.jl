@@ -13,12 +13,6 @@ function euler_matrix(N, α, β, r)
 
     A = Tridiagonal(off_diaglo, diag, off_diagup)
 
-    A[1, 2] = 2*α
-
-    A[end, end] = 1
-    
-    A[end, end-1] = 0
-
     return A
 
 
@@ -52,7 +46,15 @@ function initialilize(N, J, d_t, D)
 
     A = euler_matrix(N, α, β, r)
 
-    return r, Θ, A
+    A[1, 2] = 2*α
+
+    A[end, end] = 1
+    
+    A[end, end-1] = 0
+    
+    u = zeros(N, T)
+
+    return r, Θ, A, u
 
 end
 
@@ -60,9 +62,7 @@ end
 function run(N, J, T, d_t, D)
 
 
-    r, Θ, A = initialilize(N, J, d_t, D)
-
-    u = zeros(N, T)
+    r, Θ, A, u = initialilize(N, J, d_t, D)
 
     u[:, 1] = initialcondition(r)
 
