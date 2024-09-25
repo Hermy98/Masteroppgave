@@ -1,36 +1,57 @@
 using Plots, LinearAlgebra
 
-function euler_matrix(N, α, β, r)
+function euler_matrix(N::Int, α::Float64, β::Float64, r::Vector{Float64})
 
 
-    diag = ones(N-1)*(1 -2*α)
+    beta_array = β*ones(N)./r
 
-    off_diag = ones(N-2)*(α)
 
-    off_diaglo = off_diag .-β #.- beta_array[2:end-1]
+    diag = ones(N-1)*(1 -2* α)
 
-    off_diagup = off_diag  .+ β #.+ beta_array[3:end]
+    off_diagup = ones(N-2)*(α)
+    off_diaglo = ones(N-2)*(α)
+
+
+
+   off_diaglo .-= beta_array[3:end]
+
+   off_diagup .+= beta_array[2:end-1]
 
     A = Tridiagonal(off_diaglo, diag, off_diagup)
 
-    return A
 
+    return A
 
 
 end
 
 
-function initialcondition(r)
+function initialcondition(r::Vector{Float64})
+
 
     return  r.^2 .+4
 
 end
 
+function initialcond2(N::Int)
+
+    u1 = zeros(N)
+
+    for i in 1:N
+        u1[i] = 5 + (i-5)*(i-100)/1000
+
+    return u1
+    end
+
+end
+
+
+
 
 origoInterpolasjon(u) = (1/3)*(4*u[2] - u[3])
 
 
-function initialilize(N, J, d_t, D)
+function initialilize(N::Int, J::Int, d_t::Float64, D::Float64, T::Int)
 
 
     r = range(0, 1, length=N)
@@ -46,11 +67,13 @@ function initialilize(N, J, d_t, D)
 
     A = euler_matrix(N, α, β, r)
 
-    A[1, 2] = 2*α
+
+    A[1,2] = 2*α
 
     A[end, end] = 1
-    
+
     A[end, end-1] = 0
+
     
     u = zeros(N, T)
 
@@ -59,10 +82,10 @@ function initialilize(N, J, d_t, D)
 end
 
 
-function run(N, J, T, d_t, D)
+function run(N::Int, J::Int, T::Int, d_t::Float64, D::Float64)
 
 
-    r, Θ, A, u = initialilize(N, J, d_t, D)
+    r, Θ, A, u = initialilize(N, J, d_t, D, T)
 
     u[:, 1] = initialcondition(r)
 
@@ -70,18 +93,20 @@ function run(N, J, T, d_t, D)
     for i in 1:T-1
 
         u[2:end, i+1] = A*u[2:end, i]
-
+        
 
         u[1, i+1] = origoInterpolasjon(u[:, i+1])
+
 
     end
 
 
-    return u
+    return u, A, r
 
 end
 
-u = run(100, 10, 1000000, 1E-5, 1)
+u, A, r = run(100, 10, 100000, 1E-5, 1)
+
 
 plot(u[:, 1])
-plot!(u[:, 500])
+plot!(u[:, Int(end/2)])

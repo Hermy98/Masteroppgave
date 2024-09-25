@@ -3,26 +3,44 @@ using Plots, LinearAlgebra
 
 function get_matrix(N, α, β, r)
 
+
+    beta_array = β*ones(N)./(2 .*r)
+
     
-    off_diagup = -1*ones(N-2)*(α-β)
-    diag = ones(N-1)*(1 + 2α)
-    off_diaglo = -1*ones(N-2)*(α+β)
+    off_diagup = -1*ones(N-2)*(α/2)
+    diag = ones(N-1)*(1 + α)
+    off_diaglo = -1*ones(N-2)*(α/2)
+
+    off_diaglo .+= beta_array[3:end]
+
+    off_diagup .-= beta_array[2:end-1]
+
 
     M = Tridiagonal(off_diaglo, diag, off_diagup)
 
 
     return M
 
+end
+
+function initialcondition(N)
+
+    u_1 = zeros(N)
+
+    for i in 1:N
+        u_1[i] = 5+((i-1)*(i-100))/2000
+    end
+
+    return  u_1
 
 end
 
-function initialcondition(r)
 
-    return  r.^2 .+4
-
+function initialcondition2(r)
+    return r.^2 .+ 4
 end
 
-origoInterpolasjon(u) = (1/3)*(4*u[2] - u[3]) 
+origoInterpolasjon(u) = (1/3)*(4*u[2] - u[3])
 
 #u_originLaplace(u, d_r) = u[2] - ((d_r^2)/4)*u[1] 
 
@@ -48,8 +66,10 @@ function initialilize(N, J, d_t, D)
 
     #setting the boundary conditions
 
-    A[1,2] = -2*α
-    B[1,2] = 2*α
+
+    A[1,2] = -α
+
+    B[1,2] = α
 
     A[end, end] = 1
     A[end, end-1] = 0
@@ -69,7 +89,7 @@ function main(N, J, T, d_t, D)
 
     u = zeros(N, T)
 
-    u[:, 1] = initialcondition(r)
+    u[:, 1] = initialcondition2(r)
 
 
     for i in 1:T-1
