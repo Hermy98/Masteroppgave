@@ -1,8 +1,6 @@
 using Plots, LinearAlgebra
 
-function euler_matrix(N::Int, α::Float64, β::Float64, r::Vector{Float64})
-
-
+function euler_matrix(N::Int, α::Float64, β::Float64, r)
     beta_array = β*ones(N)./r
 
 
@@ -26,7 +24,7 @@ function euler_matrix(N::Int, α::Float64, β::Float64, r::Vector{Float64})
 end
 
 
-function initialcondition(r::Vector{Float64})
+function initialcondition(r)
 
 
     return  r.^2 .+4
@@ -105,7 +103,7 @@ function run(N::Int, J::Int, T::Int, d_t::Float64, D::Float64)
 
 end
 
-u, A, r = run(100, 10, 100000, 1E-5, 1)
+@time u, A, r = run(100, 10, 100000, 1E-5, 1.)
 
 
 plot(u[:, 1])
