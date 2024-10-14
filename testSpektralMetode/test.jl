@@ -7,13 +7,13 @@ function get_matrix(N, α, β, r)
     beta_array = β*ones(N)./(2 .*r)
 
     
-    off_diagup = -1*ones(N-2)*(α/2)
-    diag = ones(N-1)*(1 + α)
-    off_diaglo = -1*ones(N-2)*(α/2)
+    off_diagup = -1*ones(N-1)*(α/2)
+    diag = ones(N)*(1 + α) # N for interpolasjon
+    off_diaglo = -1*ones(N-1)*(α/2)#N-1 for interpolasjon
 
-    off_diaglo .+= beta_array[3:end]
+    off_diaglo .+= beta_array[2:end]
 
-    off_diagup .-= beta_array[2:end-1]
+    off_diagup .-= beta_array[1:end-1]
 
 
     M = Tridiagonal(off_diaglo, diag, off_diagup)
@@ -38,10 +38,14 @@ end
 
 function initialcondition2(r, θ)
 
-    u1 = zeros(length(r), length(θ))
+    u1 = zeros(length(2*r), length(θ/2))
 
-    for j in eachindex(θ)
-        u1[:, j] = (r.^2).*cos(θ[j]).+ 4
+    r1 = range(0, 2*pi, length=length(2*r))
+
+    for j in 1:length(θ/2)
+
+        u1[:, j] = cos.(r1)
+
     end
 
     return  u1
@@ -66,7 +70,6 @@ function initialilize(N, J, d_t, D)
 
     β = (D*d_t)/(2*d_r)
 
-    #γ = 4*(d_t^2)/(d_r^2*D^2)
 
     A = get_matrix(N, α, β, r)
 
@@ -74,10 +77,13 @@ function initialilize(N, J, d_t, D)
 
     #setting the boundary conditions
 
+    A[1,1] *= 2
 
-    A[1,2] = -α
+    B[1,1] *= 2
 
-    B[1,2] = α
+    A[1,2] = -2*α
+
+    B[1,2] = 2*α
 
     A[end, end] = 1
     A[end, end-1] = 0
@@ -102,9 +108,9 @@ function main(N, J, T, d_t, D)
 
     for i in 1:T-1
         for j in 1:J
-            u[2:end, j, i+1] = (A\B)*u[2:end, j ,i]
+            u[:, j, i+1] = (A\B)*u[:, j ,i]
 
-            u[1, :,  i+1] .= origoInterpolasjon(u[:, :, i+1])
+            #u[1, :,  i+1] .= origoInterpolasjon(u[:, :, i+1])
         end
 
     end
@@ -114,28 +120,23 @@ function main(N, J, T, d_t, D)
 
 end
 
-function gridtransform(r, θ, N, M)
 
-    x = zeros(N*M)
-    y = zeros(N*M)
+function coordinatetransform(Θ, r, N, J)
+    
 
-    for i in 1:N
-        for j in 1:M
-            x[j+(i-1)*M] = r[i]*cos(θ[j])
-            y[j+(i-1)*M] = r[i]*sin(θ[j])
-        end
-    end
+    X = r'.*cos.(Θ)
 
-    return x, y
+    Y = r'.*sin.(Θ)
+
+
+    return X, Y
 
 end
-
-
-
 @time u , r, Θ = main(100, 100, 10000, 1E-4, 1)
 
-X, Y = gridtransform(r, Θ, 100, 10)
+
+x, y = coordinatetransform(Θ, r, 100, 100)
+surface(x, y, transpose(u[:, :, 10000]), clim=(0.990, 1), surfacecolor=transpose(u[:, :, 10000]))
 
 
-heatmap(u[:, :, 1], proj =:polar)
 
