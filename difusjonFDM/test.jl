@@ -1,19 +1,21 @@
 using Plots, LinearAlgebra, Statistics
 
 
-function get_matrix(N, α, β, r)
+function get_matrix(N, α, β, r, d_t)
 
 
     beta_array = β*ones(N)./(2 .*r)
 
     
     off_diagup = -1*ones(N-1)*(α/2)
-    diag = ones(N)*(1 + α) # N for interpolasjon
+    diag = ones(N)*(1 + α)  # N for interpolasjon
     off_diaglo = -1*ones(N-1)*(α/2)#N-1 for interpolasjon
 
     off_diaglo .+= beta_array[2:end]
 
     off_diagup .-= beta_array[1:end-1]
+
+    diag[2:end] = diag[2:end] .-(4*d_t ./(r[2:end].^2))
 
 
     M = Tridiagonal(off_diaglo, diag, off_diagup)
@@ -52,6 +54,25 @@ function initialcondition2(r, θ)
 
 end
 
+
+function initialcondition3(r, θ)
+
+    u2 = zeros(length(r), length(θ))
+
+    r1 = range(0, 6*pi, length=length(r))
+
+    #u2[end, : ] = cos.(r1)
+
+    for i in eachindex(θ)
+
+        u2[:, i] = (r.^2 .+4).*cos.(θ[i])
+
+    end
+
+    return  u2
+
+end
+
 origoInterpolasjon(u) = (1/3)*(4*mean(u[2, :]) - mean(u[3, :]))
 
 #u_originLaplace(u, d_r) = u[2] - ((d_r^2)/4)*u[1] 
@@ -71,19 +92,19 @@ function initialilize(N, J, d_t, D)
     β = (D*d_t)/(2*d_r)
 
 
-    A = get_matrix(N, α, β, r)
+    A = get_matrix(N, α, β, r, d_t)
 
-    B = get_matrix(N, -α, -β, r)
+    B = get_matrix(N, -α, -β, r, d_t)
 
     #setting the boundary conditions
 
-    A[1,1] *= 2
+  #  A[1,1] *= 2
 
-    B[1,1] *= 2
+   # B[1,1] *= 2
 
-    A[1,2] = -2*α
+    A[1,2] = -α/2
 
-    B[1,2] = 2*α
+    B[1,2] = α/2
 
     A[end, end] = 1
     A[end, end-1] = 0
@@ -103,12 +124,14 @@ function main(N, J, T, d_t, D)
 
     u = zeros(N, J, T)
 
-    u[:, :, 1] = initialcondition2(r, Θ)
+    u[:, :, 1] = initialcondition3(r, Θ)
 
 
     for i in 1:T-1
         for j in 1:J
             u[:, j, i+1] = (A\B)*u[:, j ,i]
+
+            #u[1, :,  i+1] .= mean(u[1, :, i+1])
 
             #u[1, :,  i+1] .= origoInterpolasjon(u[:, :, i+1])
         end
@@ -132,11 +155,10 @@ function coordinatetransform(Θ, r, N, J)
     return X, Y
 
 end
-@time u , r, Θ = main(100, 100, 10000, 1E-4, 1)
+@time u , r, Θ = main(100, 100, 1000, 1E-5, 1)
 
 
 x, y = coordinatetransform(Θ, r, 100, 100)
-surface(x, y, transpose(u[:, :, 10000]), clim=(0.990, 1), surfacecolor=transpose(u[:, :, 10000]))
-
-
+display(surface(x, y, transpose(u[:, :, 2])))
+display(surface(x, y, transpose(u[:, :, end])))
 
