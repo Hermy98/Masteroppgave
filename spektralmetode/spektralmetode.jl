@@ -26,18 +26,26 @@ function initializederivatives(m::Int, dy::Float64, N::Int)
 
     doublederiv = dy2matrix(dy, m)
 
-    doublederiv[1, 1] = 1
+    #=doublederiv[1, 1] = 1
 
     doublederiv[1, 2] = 0
 
     doublederiv[end, end-1] = 0
 
-    doublederiv[end, end] = 1
+    doublederiv[end, end] = 1=#
+
+    doublederiv[1, 2] *= 2
+    doublederiv[end, end-1] *= 2
 
 
 
     deriv = dymatrix(dy, m)
 
+    #deriv[1, 1] = 1
+
+    #deriv[end, end] = 1
+    
+    
     deriv[1, 2] = 0
 
     deriv[end, end-1] = 0
@@ -151,17 +159,19 @@ function timederivatives(coefficientmatrix, Kmatrix,  factor, K, μ ,dublederiv,
     for i in 1:N
 
 
-        Kmatrix[:, 1,  i] = (K + (3/2)* μ) * (dublederiv[:, 1, i] - (factor[i])^2 * coefficientmatrix[:, 1, i]) + (K + 1/2*μ) * factor[i] * deriv[:, 4, i]
+       # Kmatrix[:, 1,  i] = (K + (3/2)* μ) * (dublederiv[:, 1, i] - (factor[i])^2 * coefficientmatrix[:, 1, i]) + (K + 1/2*μ) * factor[i] * deriv[:, 4, i]
 
+        Kmatrix[:, 1,  i] =  μ* dublederiv[:, 1, i] - (K + 3/2*μ) *(factor[i])^2 * coefficientmatrix[:, 1, i] + (K + 1/2*μ) * factor[i] * deriv[:, 4, i]
 
-        Kmatrix[:, 2, i] = (K + (3/2)* μ) * (dublederiv[:, 2, i] - (factor[i])^2 * coefficientmatrix[:, 2, i]) - (K + 1/2*μ) * factor[i] * deriv[:, 3, i]
+        #Kmatrix[:, 2, i] = (K + (3/2)* μ) * (dublederiv[:, 2, i] - (factor[i])^2 * coefficientmatrix[:, 2, i]) - (K + 1/2*μ) * factor[i] * deriv[:, 3, i]
+        Kmatrix[:, 2, i] = μ * dublederiv[:, 2, i] - (K + 3/2*μ)* (factor[i])^2 * coefficientmatrix[:, 2, i]  - (K + 1/2*μ) * factor[i] * deriv[:, 3, i]
 
+        #Kmatrix[:, 3, i] = (K + (3/2)* μ) * (dublederiv[:, 3, i] - (factor[i])^2 * coefficientmatrix[:, 3, i]) + (K + 1/2*μ) * factor[i] * deriv[:, 2, i]
 
-        Kmatrix[:, 3, i] = (K + (3/2)* μ) * (dublederiv[:, 3, i] - (factor[i])^2 * coefficientmatrix[:, 3, i]) + (K + 1/2*μ) * factor[i] * deriv[:, 2, i]
+        Kmatrix[:, 3, i] = (K + 3/2 *μ) * dublederiv[:, 3, i] - μ * (factor[i])^2 * coefficientmatrix[:, 3, i] + (K + 1/2*μ) * factor[i] * deriv[:, 2, i]
+        #Kmatrix[:, 4, i] = (K + (3/2)* μ) * (dublederiv[:, 4, i] - (factor[i])^2 * coefficientmatrix[:, 4, i]) - (K + 1/2*μ) * factor[i] * deriv[:, 1, i]
 
-
-        Kmatrix[:, 4, i] = (K + (3/2)* μ) * (dublederiv[:, 4, i] - (factor[i])^2 * coefficientmatrix[:, 4, i]) - (K + 1/2*μ) * factor[i] * deriv[:, 1, i]
-
+        Kmatrix[:, 4, i] = (K + (3/2)* μ) * dublederiv[:, 4, i] - μ * (factor[i])^2 * coefficientmatrix[:, 4, i] - (K + 1/2*μ) * factor[i] * deriv[:, 1, i]
     end
 
     return Kmatrix
@@ -199,11 +209,11 @@ function setinitialu(N, F, l, m, y, Ly, T)
     uy = zeros(l, m, T)
     
     for i in 1:l
-        #ux[i, :, 1] = F*cos.(((2 * π )/(Ly))*y )
+        ux[i, :, 1] = F*cos.(((2 * π )/(Ly))*y )
 
-        #uy[i, :, 1] = F*sin.(((2 * π )/(Ly))*y )
+        uy[i, :, 1] = F*sin.(((2 * π )/(Ly))*y )
 
-        ux[i, :, 1] = F*y.^3
+        #ux[i, :, 1] = F*y.^3
 
         #uy[i, :, 1] = F*y.^3 .*sin.(((2 * π )/(Ly))*y )
 
@@ -320,5 +330,5 @@ f = Figure(size = (800, 800))
 
 Axis(f[1, 1])
 
-arrows(x, y, ux[:, :, 30], uy[:, :, 30], arrowsize = 10, lengthscale = 0.1)
+arrows(x, y, ux[:, :, 70], uy[:, :, 70], arrowsize = 10, lengthscale = 0.1)
 
