@@ -26,13 +26,15 @@ function initializederivatives(m::Int, dy::Float64, N::Int)
 
     doublederiv = dy2matrix(dy, m)
 
-    #=doublederiv[1, 1] = 1
+    #=
+    doublederiv[1, 1] = 1
 
     doublederiv[1, 2] = 0
 
     doublederiv[end, end-1] = 0
 
-    doublederiv[end, end] = 1=#
+    doublederiv[end, end] = 1
+    =#
 
     doublederiv[1, 2] *= 2
     doublederiv[end, end-1] *= 2
@@ -41,6 +43,7 @@ function initializederivatives(m::Int, dy::Float64, N::Int)
 
     deriv = dymatrix(dy, m)
 
+    
     #deriv[1, 1] = 1
 
     #deriv[end, end] = 1
@@ -49,7 +52,7 @@ function initializederivatives(m::Int, dy::Float64, N::Int)
     deriv[1, 2] = 0
 
     deriv[end, end-1] = 0
-
+    
 
 
     doublederivarivesmatrix = zeros(m, 4, N)
@@ -161,10 +164,10 @@ function timederivatives(coefficientmatrix, Kmatrix,  factor, K, μ ,dublederiv,
 
        # Kmatrix[:, 1,  i] = (K + (3/2)* μ) * (dublederiv[:, 1, i] - (factor[i])^2 * coefficientmatrix[:, 1, i]) + (K + 1/2*μ) * factor[i] * deriv[:, 4, i]
 
-        Kmatrix[:, 1,  i] =  μ* dublederiv[:, 1, i] - (K + 3/2*μ) *(factor[i])^2 * coefficientmatrix[:, 1, i] + (K + 1/2*μ) * factor[i] * deriv[:, 4, i]
+        Kmatrix[:, 1,  i] =  μ* dublederiv[:, 1, i] - (K + 3/2*μ) * (factor[i])^2 * coefficientmatrix[:, 1, i] + (K + 1/2*μ) * factor[i] * deriv[:, 4, i]
 
         #Kmatrix[:, 2, i] = (K + (3/2)* μ) * (dublederiv[:, 2, i] - (factor[i])^2 * coefficientmatrix[:, 2, i]) - (K + 1/2*μ) * factor[i] * deriv[:, 3, i]
-        Kmatrix[:, 2, i] = μ * dublederiv[:, 2, i] - (K + 3/2*μ)* (factor[i])^2 * coefficientmatrix[:, 2, i]  - (K + 1/2*μ) * factor[i] * deriv[:, 3, i]
+        Kmatrix[:, 2, i] = μ * dublederiv[:, 2, i] - (K + 3/2*μ) * (factor[i])^2 * coefficientmatrix[:, 2, i]  - (K + 1/2*μ) * factor[i] * deriv[:, 3, i]
 
         #Kmatrix[:, 3, i] = (K + (3/2)* μ) * (dublederiv[:, 3, i] - (factor[i])^2 * coefficientmatrix[:, 3, i]) + (K + 1/2*μ) * factor[i] * deriv[:, 2, i]
 
@@ -316,7 +319,6 @@ function sum(savecoefficients, N, T, m)
 
         end 
 
-
         
     end
 
@@ -324,11 +326,11 @@ function sum(savecoefficients, N, T, m)
 
 end
 
-ux, uy, x, y, savecoefficients = sumulation(10, 0.025, 10, 1, 2, 2., 100, 0.00001, 5., 1.)
+ux, uy, x, y, savecoefficients = sumulation(20, 0.025, 10, 1, 2, 2., 100, 0.00001, 5., 1.)
 
 f = Figure(size = (800, 800))
 
 Axis(f[1, 1])
 
-arrows(x, y, ux[:, :, 70], uy[:, :, 70], arrowsize = 10, lengthscale = 0.1)
+arrows(x, y, ux[:, :, 20], uy[:, :, 20], arrowsize = 10, lengthscale = 0.1)
 
