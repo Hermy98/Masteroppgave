@@ -74,14 +74,14 @@ function initcoefficientmatrix(m::Int, N::Int, Lx::Int, ux::Array{Float64, 3}, u
 
         for j in 1:m
 
-            yint[1, :] = ux[:, j, 1].*cos.(((2 * π * i)/Lx)*x )
+            yint[1, :] = (1/Lx) * ux[:, j, 1].*cos.(((2 * π * i)/Lx)*x )
 
-            yint[2, :] = ux[:, j, 1].*sin.(((2 * π * i)/Lx)*x )
+            yint[2, :] = (1/Lx) * ux[:, j, 1].*sin.(((2 * π * i)/Lx)*x )
 
 
-            yint[3, :] = uy[:, j, 1].*cos.(((2 * π * i)/Lx)*x )
+            yint[3, :] = (1/Lx) * uy[:, j, 1].*cos.(((2 * π * i)/Lx)*x )
 
-            yint[4, :] = uy[:, j, 1].*sin.(((2 * π * i)/Lx)*x )
+            yint[4, :] = (1/Lx) * uy[:, j, 1].*sin.(((2 * π * i)/Lx)*x )
             
 
             method = SimpsonsRule()
@@ -332,5 +332,5 @@ f = Figure(size = (800, 800))
 
 Axis(f[1, 1])
 
-arrows(x, y, ux[:, :, 20], uy[:, :, 20], arrowsize = 10, lengthscale = 0.1)
+arrows(x, y, ux[:, :, 13], uy[:, :, 13], arrowsize = 10, lengthscale = 0.1)
 
