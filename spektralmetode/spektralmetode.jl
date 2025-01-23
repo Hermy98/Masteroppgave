@@ -1,4 +1,4 @@
-using LinearAlgebra, CairoMakie, SparseArrays, Integrals
+using LinearAlgebra, CairoMakie, SparseArrays, Integrals, FFTW
 
 function dy2matrix(dy::Float64, m::Int) #l er antal punkter i x-retning, m er antall punkter i y-retning
 
@@ -36,8 +36,8 @@ function initializederivatives(m::Int, dy::Float64, N::Int)
     doublederiv[end, end] = 1
     =#
 
-    doublederiv[1, 2] *= 2
-    doublederiv[end, end-1] *= 2
+    #doublederiv[1, 2] *= 2
+    #doublederiv[end, end-1] *= 2
 
 
 
@@ -49,15 +49,15 @@ function initializederivatives(m::Int, dy::Float64, N::Int)
     #deriv[end, end] = 1
     
     
-    deriv[1, 2] = 0
+    #deriv[1, 2] = 0
 
-    deriv[end, end-1] = 0
+    #deriv[end, end-1] = 0
     
 
 
-    doublederivarivesmatrix = zeros(m, 4, N)
+    doublederivarivesmatrix = zeros(m, 4, N+1)
 
-    derivativematrix = zeros(m, 4, N)
+    derivativematrix = zeros(m, 4, N+1)
 
     return doublederiv, deriv, doublederivarivesmatrix, derivativematrix
 
@@ -65,23 +65,38 @@ end
 
 function initcoefficientmatrix(m::Int, N::Int, Lx::Int, ux::Array{Float64, 3}, uy::Array{Float64, 3}, x, l)
 
-    coefficientmatrix = zeros(m, 4,  N)
+    coefficientmatrix = zeros(m, 4,  N+1)
 
-    yint = ones(4, l)
+    #yint = ones(4, l)
+
+    for j in 1:m
+
+        ft_x = fft(ux[:, j, 1])
+
+        ft_y = fft(uy[:, j, 1])
+
+        coefficientmatrix[j, 1, :] = real.(ft_x)[1:N+1]
+
+        coefficientmatrix[j, 2, :] = imag.(ft_x)[1:N+1]
+
+        coefficientmatrix[j, 3, :] = real.(ft_y)[1:N+1]
+
+        coefficientmatrix[j, 4, :] = imag.(ft_y)[1:N+1]
+
+        
 
 
-    for i in 1:N
+            #=
+            print(ux[:, j, 1])
 
-        for j in 1:m
+            yint[1, :] =  ux[:, j, 1] .*cos.(((2 * π * i)/Lx)*x )
 
-            yint[1, :] = (1/Lx) * ux[:, j, 1].*cos.(((2 * π * i)/Lx)*x )
-
-            yint[2, :] = (1/Lx) * ux[:, j, 1].*sin.(((2 * π * i)/Lx)*x )
+            yint[2, :] =  ux[:, j, 1] .*sin.(((2 * π * i)/Lx)*x )
 
 
-            yint[3, :] = (1/Lx) * uy[:, j, 1].*cos.(((2 * π * i)/Lx)*x )
+            yint[3, :] =  uy[:, j, 1] .*cos.(((2 * π * i)/Lx)*x )
 
-            yint[4, :] = (1/Lx) * uy[:, j, 1].*sin.(((2 * π * i)/Lx)*x )
+            yint[4, :] =  uy[:, j, 1] .*sin.(((2 * π * i)/Lx)*x )
             
 
             method = SimpsonsRule()
@@ -89,10 +104,9 @@ function initcoefficientmatrix(m::Int, N::Int, Lx::Int, ux::Array{Float64, 3}, u
             problem = SampledIntegralProblem(yint, x)
 
             coefficientmatrix[j, :, i] = solve(problem, method)
+            =#
 
-        end
     end
-
 
     return coefficientmatrix
 
@@ -104,14 +118,14 @@ prefactor(L::Int, n::Int) = (2*π * n)/L
 
 function prefactors(Lx::Int,N::Int)
     
-    return [prefactor(Lx, n) for n in 1:N ]
+    return [prefactor(Lx, n) for n in 0:N+1 ]
 
 end
 
 
 function initialzsystem(dy::Float64, l::Int, N::Int, Lx::Int, Ly::Int, F::Float64, T::Int)
 
-    x = LinRange(-Lx/2, Lx/2, l)
+    x = LinRange(-Lx/2, Lx/2, 2*N+1)
 
     y = -Ly/2:dy:Ly/2
 
@@ -119,11 +133,11 @@ function initialzsystem(dy::Float64, l::Int, N::Int, Lx::Int, Ly::Int, F::Float6
 
     ux, uy = setinitialu(N, F, l, m, y, Ly, T)
 
-    factors = prefactors(Lx, N)
+    factors = prefactors(Lx, N+1)
 
     coefficientmatrix = initcoefficientmatrix(m, N, Lx, ux, uy, x, l)
 
-    savecoefficients = zeros(m, 4, N, T)
+    savecoefficients = zeros(m, 4, N+1, T)
 
     K1matrix= deepcopy(coefficientmatrix)
 
@@ -142,7 +156,7 @@ function derivatives(coefficientmatrix, doublederiv, deriv, derivativematrix, do
 
     for i in 1:4
 
-        for j in 1:N
+        for j in 1:N+1
 
             doublederivarivesmatrix[:, i, j] = doublederiv * coefficientmatrix[:, i, j]
 
@@ -159,22 +173,22 @@ end
 
 function timederivatives(coefficientmatrix, Kmatrix,  factor, K, μ ,dublederiv, deriv, N)
 
-    for i in 1:N
+    for i in 1:N+1
 
 
        # Kmatrix[:, 1,  i] = (K + (3/2)* μ) * (dublederiv[:, 1, i] - (factor[i])^2 * coefficientmatrix[:, 1, i]) + (K + 1/2*μ) * factor[i] * deriv[:, 4, i]
 
-        Kmatrix[:, 1,  i] =  μ* dublederiv[:, 1, i] - (K + 3/2*μ) * (factor[i])^2 * coefficientmatrix[:, 1, i] + (K + 1/2*μ) * factor[i] * deriv[:, 4, i]
+        Kmatrix[2:end-1, 1,  i] =  μ * dublederiv[2:end-1, 1, i] - (K + μ) * (factor[i])^2 * coefficientmatrix[2:end-1, 1, i] + K  * factor[i] * deriv[2:end-1, 4, i]
 
         #Kmatrix[:, 2, i] = (K + (3/2)* μ) * (dublederiv[:, 2, i] - (factor[i])^2 * coefficientmatrix[:, 2, i]) - (K + 1/2*μ) * factor[i] * deriv[:, 3, i]
-        Kmatrix[:, 2, i] = μ * dublederiv[:, 2, i] - (K + 3/2*μ) * (factor[i])^2 * coefficientmatrix[:, 2, i]  - (K + 1/2*μ) * factor[i] * deriv[:, 3, i]
+        Kmatrix[2:end-1, 2, i] = μ * dublederiv[2:end-1, 2, i] - (K + μ) * (factor[i])^2 * coefficientmatrix[2:end-1, 2, i]  - K  * factor[i] * deriv[2:end-1, 3, i]
 
         #Kmatrix[:, 3, i] = (K + (3/2)* μ) * (dublederiv[:, 3, i] - (factor[i])^2 * coefficientmatrix[:, 3, i]) + (K + 1/2*μ) * factor[i] * deriv[:, 2, i]
 
-        Kmatrix[:, 3, i] = (K + 3/2 *μ) * dublederiv[:, 3, i] - μ * (factor[i])^2 * coefficientmatrix[:, 3, i] + (K + 1/2*μ) * factor[i] * deriv[:, 2, i]
+        Kmatrix[2:end-1, 3, i] = (K +  μ) * dublederiv[2:end-1, 3, i] - μ * (factor[i])^2 * coefficientmatrix[2:end-1, 3, i] + K * factor[i] * deriv[2:end-1, 2, i]
         #Kmatrix[:, 4, i] = (K + (3/2)* μ) * (dublederiv[:, 4, i] - (factor[i])^2 * coefficientmatrix[:, 4, i]) - (K + 1/2*μ) * factor[i] * deriv[:, 1, i]
 
-        Kmatrix[:, 4, i] = (K + (3/2)* μ) * dublederiv[:, 4, i] - μ * (factor[i])^2 * coefficientmatrix[:, 4, i] - (K + 1/2*μ) * factor[i] * deriv[:, 1, i]
+        Kmatrix[2:end-1, 4, i] = (K + μ)* dublederiv[2:end-1, 4, i] - μ * (factor[i])^2 * coefficientmatrix[2:end-1, 4, i] - K * factor[i] * deriv[2:end-1, 1, i]
     end
 
     return Kmatrix
@@ -183,36 +197,38 @@ end
 
 function calculateuxuy(coefficientmatrix, N, Lx, x, l, m)
 
-    uxstep = zeros(l, m)
-
-    uystep = zeros(l, m)
-
-    for j in 1:m
-
-        for i in 1:N #indekseringsfeil per nå
-
-            uxstep[:, j] += coefficientmatrix[j, 1, i] * cos.(((2 * π * i)/Lx)*x ) + coefficientmatrix[j, 2, i] * sin.(((2 * π * i)/Lx)*x )
 
 
-            uystep[:, j] += coefficientmatrix[j, 3, i] * cos.(((2 * π * i)/Lx)*x ) + coefficientmatrix[j, 4, i] * sin.(((2 * π * i)/Lx)*x )
+    uxstep = zeros(2*N+1, m-2)
+
+    uystep = zeros(2*N+1, m-2)
+
+    for j in 2:m-1
+
+        for i in 0:N 
+
+            uxstep[:, j-1] += (coefficientmatrix[j, 1, i+1] * cos.(((2 * π * i)/Lx)*x ) - coefficientmatrix[j, 2, i+1] * sin.(((2 * π * i)/Lx)*x ))
+
+
+            uystep[:, j-1] += (coefficientmatrix[j, 3, i+1] * cos.(((2 * π * i)/Lx)*x ) - coefficientmatrix[j, 4, i+1] * sin.(((2 * π * i)/Lx)*x ))
         end 
      
 
     end
 
 
-    return uxstep, uystep
+    return (1/(2*N+1))*uxstep, (1/(2*N+1))*uystep
 
 end
 
 function setinitialu(N, F, l, m, y, Ly, T)
     
-    ux = zeros(l, m, T)
+    ux = zeros(2*N+1, m, T)
 
-    uy = zeros(l, m, T)
+    uy = zeros(2*N+1, m, T)
     
-    for i in 1:l
-        ux[i, :, 1] = F*cos.(((2 * π )/(Ly))*y )
+    for i in 1:2*N+1
+        ux[i, :, 1] = F*sin.(((2 * π )/(Ly))*y )
 
         uy[i, :, 1] = F*sin.(((2 * π )/(Ly))*y )
 
@@ -292,12 +308,11 @@ function sumulation(N::Int, dy::Float64, l::Int, Lx::Int, Ly::Int, F::Float64, T
 
     for i in 2:T
 
-        #coefficientmatrix = rk2(coefficientmatrix, dt, K1matrix, K2matrix, N, factors, K, μ, doublederiv, deriv, doublederivarivesmatrix, derivativematrix)
+        coefficientmatrix = rk2(coefficientmatrix, dt, K1matrix, K2matrix, N, factors, K, μ, doublederiv, deriv, doublederivarivesmatrix, derivativematrix)
 
+        #coefficientmatrix = rk4(coefficientmatrix, dt, K1matrix, K2matrix, K3matrix, K4matrix, N, factors, K, μ, doublederiv, deriv, doublederivarivesmatrix, derivativematrix)
 
-        coefficientmatrix = rk4(coefficientmatrix, dt, K1matrix, K2matrix, K3matrix, K4matrix, N, factors, K, μ, doublederiv, deriv, doublederivarivesmatrix, derivativematrix)
-
-        ux[:, :, i], uy[:, :, i] = calculateuxuy(coefficientmatrix, N, Lx, x, l, m)
+        ux[:, 2:end-1, i], uy[:, 2:end-1, i] = calculateuxuy(coefficientmatrix, N, Lx, x, l, m)
 
         savecoefficients[:, :, :, i] = coefficientmatrix
 
@@ -313,7 +328,7 @@ function sum(savecoefficients, N, T, m)
 
     for j in 1:T
 
-        for i in 1:N 
+        for i in 1:N+1
 
             coeffient[:, :, j] += savecoefficients[:, :, i, j]
 
@@ -326,11 +341,15 @@ function sum(savecoefficients, N, T, m)
 
 end
 
-ux, uy, x, y, savecoefficients = sumulation(20, 0.025, 10, 1, 2, 2., 100, 0.00001, 5., 1.)
+
+
+
+@time ux, uy, x, y, savecoefficients = sumulation(20, 0.025, 10, 1, 2, 0.2, 10000, 0.00001, 5., 1.)
 
 f = Figure(size = (800, 800))
 
 Axis(f[1, 1])
+arrows(x, y, ux[:, :, end], uy[:, :, end], arrowsize = 10, lengthscale = 0.1)
 
-arrows(x, y, ux[:, :, 13], uy[:, :, 13], arrowsize = 10, lengthscale = 0.1)
+
 
