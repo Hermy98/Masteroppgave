@@ -1,73 +1,23 @@
-using LinearAlgebra, CairoMakie, SparseArrays, Integrals, FFTW
-
-function dy2matrix(dy::Float64, m::Int) #l er antal punkter i x-retning, m er antall punkter i y-retning
-
-    diag = ones(m).*((-2)/(dy^2))
-
-    off_diagup = ones(m-1)./(dy^2)
-    off_diaglo = ones(m-1)./(dy^2)
+using LinearAlgebra, CairoMakie, SparseArrays, Integrals, FFTW, Dierckx
 
 
-    return Tridiagonal(off_diaglo, diag, off_diagup)
-end
+function initerpolatderivate(coefficientmatrix, y , n)
 
 
-
-function dymatrix(dy::Float64, m::Int)
-
-    off_diagup = ones(m-1)./(2*dy)
-    off_diaglo = -1. *ones(m-1)./(2*dy)
-
-    return spdiagm(-1 => off_diaglo, 1 => off_diagup)
-
-end
-
-function initializederivatives(m::Int, dy::Float64, N::Int)
-
-    doublederiv = dy2matrix(dy, m)
-
-    #=
-    doublederiv[1, 1] = 1
-
-    doublederiv[1, 2] = 0
-
-    doublederiv[end, end-1] = 0
-
-    doublederiv[end, end] = 1
-    =#
-
-    #doublederiv[1, 2] *= 2
-    #doublederiv[end, end-1] *= 2
+    spilnes = [Spline1D(y, coefficientmatrix[:, i, n]) for i in 1:4]
 
 
+    derivativ = [derivative(spilne, y) for spilne in spilnes]
 
-    deriv = dymatrix(dy, m)
+    doublederivativ = [derivative(spilne, y, nu = 2) for spilne in spilnes]
 
-    
-    #deriv[1, 1] = 1
-
-    #deriv[end, end] = 1
-    
-    
-    #deriv[1, 2] = 0
-
-    #deriv[end, end-1] = 0
-    
-
-
-    doublederivarivesmatrix = zeros(m, 4, N+1)
-
-    derivativematrix = zeros(m, 4, N+1)
-
-    return doublederiv, deriv, doublederivarivesmatrix, derivativematrix
+    return  derivativ[1], derivativ[2], derivativ[3], derivativ[4], doublederivativ[1], doublederivativ[2], doublederivativ[3], doublederivativ[4]
 
 end
 
 function initcoefficientmatrix(m::Int, N::Int, Lx::Int, ux::Array{Float64, 3}, uy::Array{Float64, 3}, x, l)
 
     coefficientmatrix = zeros(m, 4,  N+1)
-
-    #yint = ones(4, l)
 
     for j in 1:m
 
@@ -83,28 +33,6 @@ function initcoefficientmatrix(m::Int, N::Int, Lx::Int, ux::Array{Float64, 3}, u
 
         coefficientmatrix[j, 4, :] = imag.(ft_y)[1:N+1]
 
-        
-
-
-            #=
-            print(ux[:, j, 1])
-
-            yint[1, :] =  ux[:, j, 1] .*cos.(((2 * π * i)/Lx)*x )
-
-            yint[2, :] =  ux[:, j, 1] .*sin.(((2 * π * i)/Lx)*x )
-
-
-            yint[3, :] =  uy[:, j, 1] .*cos.(((2 * π * i)/Lx)*x )
-
-            yint[4, :] =  uy[:, j, 1] .*sin.(((2 * π * i)/Lx)*x )
-            
-
-            method = SimpsonsRule()
-
-            problem = SampledIntegralProblem(yint, x)
-
-            coefficientmatrix[j, :, i] = solve(problem, method)
-            =#
 
     end
 
@@ -152,43 +80,27 @@ function initialzsystem(dy::Float64, l::Int, N::Int, Lx::Int, Ly::Int, F::Float6
 end
 
 
-function derivatives(coefficientmatrix, doublederiv, deriv, derivativematrix, doublederivarivesmatrix, N)
 
-    for i in 1:4
-
-        for j in 1:N+1
-
-            doublederivarivesmatrix[:, i, j] = doublederiv * coefficientmatrix[:, i, j]
-
-            derivativematrix[:, i, j] = deriv * coefficientmatrix[:, i, j]
-        end
-    end
-
-    return derivativematrix, doublederivarivesmatrix
-
-end
-
-
-
-
-function timederivatives(coefficientmatrix, Kmatrix,  factor, K, μ ,dublederiv, deriv, N)
+function timederivatives(coefficientmatrix, Kmatrix,  factor, K, μ , N, y)
 
     for i in 1:N+1
 
+        an_deriv, bn_deriv, cn_deriv, dn_deriv, an_doublederiv, bn_doublederiv, cn_doublederiv, dn_doublederiv = initerpolatderivate(coefficientmatrix, y, i)
 
-       # Kmatrix[:, 1,  i] = (K + (3/2)* μ) * (dublederiv[:, 1, i] - (factor[i])^2 * coefficientmatrix[:, 1, i]) + (K + 1/2*μ) * factor[i] * deriv[:, 4, i]
 
-        Kmatrix[2:end-1, 1,  i] =  μ * dublederiv[2:end-1, 1, i] - (K + μ) * (factor[i])^2 * coefficientmatrix[2:end-1, 1, i] + K  * factor[i] * deriv[2:end-1, 4, i]
+       #Kmatrix[:, 1,  i] = (K + (3/2)* μ) * (dublederiv[:, 1, i] - (factor[i])^2 * coefficientmatrix[:, 1, i]) + (K + 1/2*μ) * factor[i] * deriv[:, 4, i]
+
+        Kmatrix[2:end-1, 1,  i] =  μ * an_doublederiv[2:end-1] - (K + μ) * (factor[i])^2 * coefficientmatrix[2:end-1, 1, i] + K  * factor[i] * dn_deriv[2:end-1]
 
         #Kmatrix[:, 2, i] = (K + (3/2)* μ) * (dublederiv[:, 2, i] - (factor[i])^2 * coefficientmatrix[:, 2, i]) - (K + 1/2*μ) * factor[i] * deriv[:, 3, i]
-        Kmatrix[2:end-1, 2, i] = μ * dublederiv[2:end-1, 2, i] - (K + μ) * (factor[i])^2 * coefficientmatrix[2:end-1, 2, i]  - K  * factor[i] * deriv[2:end-1, 3, i]
+        Kmatrix[2:end-1, 2, i] = μ * bn_doublederiv[2:end-1] - (K + μ) * (factor[i])^2 * coefficientmatrix[2:end-1, 2, i]  - K  * factor[i] * cn_deriv[2:end-1]
 
         #Kmatrix[:, 3, i] = (K + (3/2)* μ) * (dublederiv[:, 3, i] - (factor[i])^2 * coefficientmatrix[:, 3, i]) + (K + 1/2*μ) * factor[i] * deriv[:, 2, i]
 
-        Kmatrix[2:end-1, 3, i] = (K +  μ) * dublederiv[2:end-1, 3, i] - μ * (factor[i])^2 * coefficientmatrix[2:end-1, 3, i] + K * factor[i] * deriv[2:end-1, 2, i]
+        Kmatrix[2:end-1, 3, i] = (K +  μ) * cn_doublederiv[2:end-1] - μ * (factor[i])^2 * coefficientmatrix[2:end-1, 3, i] + K * factor[i] * bn_deriv[2:end-1]
         #Kmatrix[:, 4, i] = (K + (3/2)* μ) * (dublederiv[:, 4, i] - (factor[i])^2 * coefficientmatrix[:, 4, i]) - (K + 1/2*μ) * factor[i] * deriv[:, 1, i]
 
-        Kmatrix[2:end-1, 4, i] = (K + μ)* dublederiv[2:end-1, 4, i] - μ * (factor[i])^2 * coefficientmatrix[2:end-1, 4, i] - K * factor[i] * deriv[2:end-1, 1, i]
+        Kmatrix[2:end-1, 4, i] = (K + μ)* dn_doublederiv[2:end-1] - μ * (factor[i])^2 * coefficientmatrix[2:end-1, 4, i] - K * factor[i] * an_deriv[2:end-1] 
     end
 
     return Kmatrix
@@ -242,18 +154,14 @@ function setinitialu(N, F, l, m, y, Ly, T)
 
 end
 
-function rk2(coefficientmatrix, dt, K1matrix, K2matrix,  N, factor, K, μ, doublederiv, deriv, doublederivarivesmatrix, derivativematrix)
-
-    derivativematrix, doublederivarivesmatrix = derivatives(coefficientmatrix, doublederiv, deriv, derivativematrix, doublederivarivesmatrix, N)
+function rk2(coefficientmatrix, dt, K1matrix, K2matrix,  N, factor, K, μ, y)
 
 
-    K1matrix = timederivatives(coefficientmatrix, K1matrix,  factor, K, μ ,doublederivarivesmatrix, derivativematrix, N)
+
+    K1matrix = timederivatives(coefficientmatrix, K1matrix,  factor, K, μ , N, y)
 
 
-    derivativematrix, doublederivarivesmatrix = derivatives(coefficientmatrix + dt/2 * K1matrix , doublederiv, deriv, derivativematrix, doublederivarivesmatrix, N)
-
-
-    K2matrix = timederivatives(coefficientmatrix + dt/2 * K1matrix, K2matrix,  factor, K, μ ,doublederivarivesmatrix, derivativematrix, N)
+    K2matrix = timederivatives(coefficientmatrix + dt/2 * K1matrix, K2matrix,  factor, K, μ , N, y)
 
 
     coefficientmatrix += dt * K2matrix
@@ -265,30 +173,19 @@ function rk2(coefficientmatrix, dt, K1matrix, K2matrix,  N, factor, K, μ, doubl
 end
 
 
-function rk4(coefficientmatrix, dt, K1matrix, K2matrix, K3matrix, K4matrix, N, factor, K, μ, doublederiv, deriv, doublederivarivesmatrix, derivativematrix)
-
-    derivativematrix, doublederivarivesmatrix = derivatives(coefficientmatrix, doublederiv, deriv, derivativematrix, doublederivarivesmatrix, N)
+function rk4(coefficientmatrix, dt, K1matrix, K2matrix, K3matrix, K4matrix, N, factor, K, μ, y)
 
 
-    K1matrix = timederivatives(coefficientmatrix, K1matrix,  factor, K, μ ,doublederivarivesmatrix, derivativematrix, N)
+    K1matrix = timederivatives(coefficientmatrix, K1matrix,  factor, K, μ , N, y)
 
 
-    derivativematrix, doublederivarivesmatrix = derivatives(coefficientmatrix + dt/2 * K1matrix , doublederiv, deriv, derivativematrix, doublederivarivesmatrix, N)
+    K2matrix = timederivatives(coefficientmatrix + dt/2 * K1matrix, K2matrix,  factor, K, μ , N, y)
 
 
-    K2matrix = timederivatives(coefficientmatrix + dt/2 * K1matrix, K2matrix,  factor, K, μ ,doublederivarivesmatrix, derivativematrix, N)
+    K3matrix = timederivatives(coefficientmatrix + dt/2 * K2matrix, K3matrix,  factor, K, μ , N, y)
 
 
-    derivativematrix, doublederivarivesmatrix = derivatives(coefficientmatrix + dt/2 * K2matrix , doublederiv, deriv, derivativematrix, doublederivarivesmatrix, N)
-
-
-    K3matrix = timederivatives(coefficientmatrix + dt/2 * K2matrix, K3matrix,  factor, K, μ ,doublederivarivesmatrix, derivativematrix, N)
-
-
-    derivativematrix, doublederivarivesmatrix = derivatives(coefficientmatrix + dt * K3matrix , doublederiv, deriv, derivativematrix, doublederivarivesmatrix, N)
-
-
-    K4matrix = timederivatives(coefficientmatrix + dt * K3matrix, K4matrix,  factor, K, μ ,doublederivarivesmatrix, derivativematrix, N)
+    K4matrix = timederivatives(coefficientmatrix + dt * K3matrix, K4matrix,  factor, K, μ , N, y)
 
 
     coefficientmatrix += dt/6 * (K1matrix + 2 * K2matrix + 2 * K3matrix + K4matrix)
@@ -302,15 +199,13 @@ function sumulation(N::Int, dy::Float64, l::Int, Lx::Int, Ly::Int, F::Float64, T
 
     x, y, m, ux, uy, factors, coefficientmatrix, K1matrix, K2matrix, K3matrix, K4matrix, savecoefficients = initialzsystem(dy, l, N, Lx, Ly, F, T)
 
-    doublederiv, deriv, doublederivarivesmatrix, derivativematrix = initializederivatives(m, dy, N)
-
     savecoefficients[:, :, :, 1] = coefficientmatrix
 
     for i in 2:T
 
-        coefficientmatrix = rk2(coefficientmatrix, dt, K1matrix, K2matrix, N, factors, K, μ, doublederiv, deriv, doublederivarivesmatrix, derivativematrix)
+        #coefficientmatrix = rk2(coefficientmatrix, dt, K1matrix, K2matrix, N, factors, K, μ, y)
 
-        #coefficientmatrix = rk4(coefficientmatrix, dt, K1matrix, K2matrix, K3matrix, K4matrix, N, factors, K, μ, doublederiv, deriv, doublederivarivesmatrix, derivativematrix)
+        coefficientmatrix = rk4(coefficientmatrix, dt, K1matrix, K2matrix, K3matrix, K4matrix, N, factors, K, μ,y)
 
         ux[:, 2:end-1, i], uy[:, 2:end-1, i] = calculateuxuy(coefficientmatrix, N, Lx, x, l, m)
 
@@ -344,12 +239,12 @@ end
 
 
 
-@time ux, uy, x, y, savecoefficients = sumulation(20, 0.025, 10, 1, 2, 0.2, 10000, 0.00001, 5., 1.)
+@time u_x, u_y, x, y, savecoefficients = sumulation(20, 0.1, 20, 1, 2, 0.2, 100, 0.00001, 5., 2.)
 
 f = Figure(size = (800, 800))
 
 Axis(f[1, 1])
-arrows(x, y, ux[:, :, end], uy[:, :, end], arrowsize = 10, lengthscale = 0.1)
+arrows(x, y, u_x[:, :, 100], u_y[:, :, 100], arrowsize = 10, lengthscale = 0.1)
 
 
 
