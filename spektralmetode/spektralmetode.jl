@@ -1,11 +1,9 @@
-using LinearAlgebra, CairoMakie, SparseArrays, Integrals, FFTW, Dierckx
+using LinearAlgebra, CairoMakie, SparseArrays, Integrals, FFTW, Dierckx, GLMakie
 
 
 function initerpolatderivate(coefficientmatrix, y , n)
 
-
     spilnes = [Spline1D(y, coefficientmatrix[:, i, n]) for i in 1:4]
-
 
     derivativ = [derivative(spilne, y) for spilne in spilnes]
 
@@ -32,7 +30,6 @@ function initcoefficientmatrix(m::Int, N::Int, Lx::Int, ux::Array{Float64, 3}, u
         coefficientmatrix[j, 3, :] = real.(ft_y)[1:N+1]
 
         coefficientmatrix[j, 4, :] = imag.(ft_y)[1:N+1]
-
 
     end
 
@@ -108,8 +105,6 @@ function timederivatives(coefficientmatrix, Kmatrix,  factor, K, μ , N, y)
 end
 
 function calculateuxuy(coefficientmatrix, N, Lx, x, l, m)
-
-
 
     uxstep = zeros(2*N+1, m-2)
 
@@ -201,6 +196,8 @@ function sumulation(N::Int, dy::Float64, l::Int, Lx::Int, Ly::Int, F::Float64, T
 
     savecoefficients[:, :, :, 1] = coefficientmatrix
 
+
+
     for i in 2:T
 
         #coefficientmatrix = rk2(coefficientmatrix, dt, K1matrix, K2matrix, N, factors, K, μ, y)
@@ -236,15 +233,158 @@ function sum(savecoefficients, N, T, m)
 
 end
 
+function divergence(ux, uy, x, y, T, K , μ,  energy)
+
+    divergence_t = deepcopy(ux)
+
+    if energy == true
+
+        defenergy_t = deepcopy(ux)
+
+    end
+
+    for i in 1:T
+
+
+        ux_spline = Spline2D(x, y, ux[:, :, i])
+
+        uy_spline = Spline2D(x, y, uy[:, :, i])
+
+        ux_deriv = derivative(ux_spline, x, y, nux = 1, nuy = 0)
+
+        uy_deriv = derivative(uy_spline, x, y, nux = 0, nuy = 1)
+
+        divergence_t[:, :, i] = ux_deriv + uy_deriv
+
+
+        if energy == true
+
+            ux_yderiv = derivative(ux_spline, x, y, nux = 0, nuy = 1)
+
+            uy_xderiv = derivative(uy_spline, x, y, nux = 1, nuy = 0)
+
+            defenergy_t[:, :, i] = (1/2)* K * (ux_deriv + uy_deriv).^2 + μ *( 1/2*(ux_yderiv+uy_xderiv) - (ux_deriv + uy_deriv)).^2
+
+        end
+
+
+    end
+
+
+    if energy == true
+
+        return divergence_t, defenergy_t
+
+    else
+
+        return divergence_t
+
+    end
+
+end
 
 
 
-@time u_x, u_y, x, y, savecoefficients = sumulation(20, 0.1, 20, 1, 2, 0.2, 100, 0.00001, 5., 2.)
-
-f = Figure(size = (800, 800))
-
-Axis(f[1, 1])
-arrows(x, y, u_x[:, :, 100], u_y[:, :, 100], arrowsize = 10, lengthscale = 0.1)
 
 
 
+function animation_2d(u_x, u_y, x, y, numiter, framerate)
+
+    fig = Figure(size = (800, 800))
+
+    ax1 = Axis(fig[1, 1])
+
+    iplot = Observable(1)
+
+    ux = @lift(u_x[:, :, $iplot])
+
+    uy = @lift(u_y[:, :, $iplot])
+
+    GLMakie.arrows!(x, y, ux, uy, arrowsize = 10, lengthscale = 0.1)
+
+    display(fig)
+
+
+
+    # for i in 1:numiter
+
+    #     iplot[] = i
+
+    #     sleep(0.05)
+
+    # end 
+
+
+
+    record(fig, "animation.mp4", 1:10:numiter; framerate = framerate) do i
+      iplot[] = i
+
+      sleep(0.05)
+
+    end
+
+
+end
+
+
+function animation_1d(u, x, y, numiter, framerate)
+
+    fig2 = Figure(size = (800, 800))
+
+    ax2 = Axis(fig2[1, 1], aspect=  1)
+
+    iplot1d = Observable(1)
+
+    min = minimum(u)
+
+    max = maximum(u)
+
+    uplot = @lift(u[:, :, $iplot1d])
+
+    GLMakie.heatmap!(x, y, uplot, colorrange = (min, max), colormap = :jet1)
+
+    GLMakie.Colorbar(fig2[1, 2], limits = (min, max), colormap = :jet1)
+
+    display(fig2)
+
+    # for i in 1:numiter
+
+    #     iplot1d[] = i
+
+    #     sleep(0.05)
+    
+    # end
+
+    record(fig2, "animation2.mp4", 1:10:numiter; framerate = framerate) do i
+     iplot1d[] = i
+
+     sleep(0.05)
+
+    end
+
+end
+
+
+@time u_x, u_y, x, y, savecoefficients = sumulation(20, 1., 20, 40, 20, 10., 10000, 0.001, 5., 2.)  
+
+#f = CairoMakie.Figure(size = (800, 800))
+
+#CairoMakie.Axis(f[1, 1])
+#CairoMakie.arrows(x, y, u_x[:, :, 1], u_y[:, :, 1], arrowsize = 10, lengthscale = 0.1)
+
+#animation_2d(u_x, u_y, x, y, 10000, 30)
+
+
+divergence_u, defenergy = divergence(u_x, u_y, x, y, 10000, 5., 2., true)
+
+f = GLMakie.Figure(size = (800, 800))
+
+GLMakie.Axis(f[1, 1])
+
+GLMakie.heatmap!(x, y, defenergy[:, :, 1], colormap = :jet1)
+Colorbar(f[1, 2], limits = (minimum(defenergy), maximum(defenergy)), colormap = :jet1)
+display(f)
+
+
+
+#animation_1d(divergence_u, x, y, 10000, 30)
