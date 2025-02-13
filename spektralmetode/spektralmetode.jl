@@ -114,10 +114,10 @@ function calculateuxuy(coefficientmatrix, N, Lx, x, l, m)
 
         for i in 0:N 
 
-            uxstep[:, j-1] += (coefficientmatrix[j, 1, i+1] * cos.(((2 * π * i)/Lx)*x ) - coefficientmatrix[j, 2, i+1] * sin.(((2 * π * i)/Lx)*x ))
+            uxstep[:, j-1] += (coefficientmatrix[j, 1, i+1] * cos.(((2 * π * i)/Lx)*x ) + coefficientmatrix[j, 2, i+1] * sin.(((2 * π * i)/Lx)*x ))
 
 
-            uystep[:, j-1] += (coefficientmatrix[j, 3, i+1] * cos.(((2 * π * i)/Lx)*x ) - coefficientmatrix[j, 4, i+1] * sin.(((2 * π * i)/Lx)*x ))
+            uystep[:, j-1] += (coefficientmatrix[j, 3, i+1] * cos.(((2 * π * i)/Lx)*x ) + coefficientmatrix[j, 4, i+1] * sin.(((2 * π * i)/Lx)*x ))
         end 
      
 
@@ -135,6 +135,7 @@ function setinitialu(N, F, l, m, y, Ly, T)
     uy = zeros(2*N+1, m, T)
     
     for i in 1:2*N+1
+
         ux[i, :, 1] = F*sin.(((2 * π )/(Ly))*y )
 
         uy[i, :, 1] = F*sin.(((2 * π )/(Ly))*y )
@@ -191,7 +192,6 @@ function rk4(coefficientmatrix, dt, K1matrix, K2matrix, K3matrix, K4matrix, N, f
 end
 
 function sumulation(N::Int, dy::Float64, l::Int, Lx::Int, Ly::Int, F::Float64, T::Int, dt::Float64, K::Float64, μ::Float64)
-
     x, y, m, ux, uy, factors, coefficientmatrix, K1matrix, K2matrix, K3matrix, K4matrix, savecoefficients = initialzsystem(dy, l, N, Lx, Ly, F, T)
 
     savecoefficients[:, :, :, 1] = coefficientmatrix
@@ -263,7 +263,7 @@ function divergence(ux, uy, x, y, T, K , μ,  energy)
 
             uy_xderiv = derivative(uy_spline, x, y, nux = 1, nuy = 0)
 
-            defenergy_t[:, :, i] = (1/2)* K * (ux_deriv + uy_deriv).^2 + μ *( 1/2*(ux_yderiv+uy_xderiv) - (ux_deriv + uy_deriv)).^2
+            defenergy_t[:, :, i] = (1/2)* K * (ux_deriv + uy_deriv).^2 + μ *((1/2)*(ux_yderiv+uy_xderiv) - (ux_deriv + uy_deriv)).^2
 
         end
 
@@ -365,25 +365,45 @@ function animation_1d(u, x, y, numiter, framerate)
 end
 
 
-@time u_x, u_y, x, y, savecoefficients = sumulation(20, 1., 20, 40, 20, 10., 10000, 0.001, 5., 2.)  
-
-#f = CairoMakie.Figure(size = (800, 800))
-
-#CairoMakie.Axis(f[1, 1])
-#CairoMakie.arrows(x, y, u_x[:, :, 1], u_y[:, :, 1], arrowsize = 10, lengthscale = 0.1)
-
-#animation_2d(u_x, u_y, x, y, 10000, 30)
+@time u_x, u_y, x, y, savecoefficients = sumulation(20, 1., 20, 40, 20, 10., 10000, 0.001, 5., 2.)
 
 
-divergence_u, defenergy = divergence(u_x, u_y, x, y, 10000, 5., 2., true)
 
-f = GLMakie.Figure(size = (800, 800))
+# ux_spline = Spline2D(x, y, u_x[:, :, 1])
 
-GLMakie.Axis(f[1, 1])
+# uy_spline = Spline2D(x, y, u_y[:, :, 1])
 
-GLMakie.heatmap!(x, y, defenergy[:, :, 1], colormap = :jet1)
-Colorbar(f[1, 2], limits = (minimum(defenergy), maximum(defenergy)), colormap = :jet1)
-display(f)
+# ux_deriv = derivative(ux_spline, x, y, nux = 1, nuy = 0)
+
+# uy_deriv = derivative(uy_spline, x, y, nux = 0, nuy = 1)
+
+
+# fig = Figure(size = (800, 800))
+
+# ax1 = Axis(fig[1, 1])
+
+# heatmap!(x, y , uy_deriv)
+# Colorbar(fig[1,2], limits = (minimum(ux_deriv), maximum(ux_deriv)))
+# display(fig)
+
+
+# f = CairoMakie.Figure(size = (800, 800))
+
+# CairoMakie.Axis(f[1, 1])
+# CairoMakie.arrows(x, y, u_x[:, :, 1], u_y[:, :, 1], arrowsize = 10, lengthscale = 0.1)
+
+animation_2d(u_x, u_y, x, y, 10000, 30)
+
+
+# divergence_u, defenergy = divergence(u_x, u_y, x, y, 10000, 5., 2., true)
+
+# f = GLMakie.Figure(size = (800, 800))
+
+# GLMakie.Axis(f[1, 1])
+
+# GLMakie.heatmap!(x, y, defenergy[:, :, 2], colormap = :jet1)
+# Colorbar(f[1, 2], limits = (minimum(defenergy), maximum(defenergy)), colormap = :jet1)
+# display(f)
 
 
 
