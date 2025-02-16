@@ -13,7 +13,7 @@ function initerpolatderivate(coefficientmatrix, y , n)
 
 end
 
-function initcoefficientmatrix(m::Int, N::Int, Lx::Int, ux::Array{Float64, 3}, uy::Array{Float64, 3}, x, l)
+function initcoefficientmatrix(m::Int, N::Int, ux::Array{Float64, 3}, uy::Array{Float64, 3})
 
     coefficientmatrix = zeros(m, 4,  N+1)
 
@@ -38,7 +38,7 @@ function initcoefficientmatrix(m::Int, N::Int, Lx::Int, ux::Array{Float64, 3}, u
 end
 
 
-function initialzsystem(dy::Float64, l::Int, N::Int, Lx::Int, Ly::Int, F::Float64, T::Int)
+function initialzsystem(dy::Float64, N::Int, Lx::Int, Ly::Int, F::Float64, T::Int)
 
     x = LinRange(-Lx/2, Lx/2, 2*N+1)
 
@@ -46,11 +46,11 @@ function initialzsystem(dy::Float64, l::Int, N::Int, Lx::Int, Ly::Int, F::Float6
 
     m = length(y)
 
-    ux, uy = setinitialu(N, F, l, m, y, Ly, T)
+    ux, uy = setinitialu(N, F, m, y, Ly, T)
 
     factors = prefactors(Lx, N+1)
 
-    coefficientmatrix = initcoefficientmatrix(m, N, Lx, ux, uy, x, l)
+    coefficientmatrix = initcoefficientmatrix(m, N, ux, uy)
 
     savecoefficients = zeros(m, 4, N+1, T)
 
@@ -62,7 +62,9 @@ function initialzsystem(dy::Float64, l::Int, N::Int, Lx::Int, Ly::Int, F::Float6
 
     K4matrix = deepcopy(coefficientmatrix)
 
-    return x, y, m, ux, uy, factors, coefficientmatrix, K1matrix, K2matrix, K3matrix, K4matrix, savecoefficients
+    Kmatrix = [K1matrix, K2matrix, K3matrix, K4matrix]
+
+    return x, y, m, ux, uy, factors, coefficientmatrix, Kmatrix, savecoefficients
 
 end
 
@@ -94,7 +96,7 @@ function timederivatives(coefficientmatrix, Kmatrix,  factor, K, μ , N, y)
 
 end
 
-function calculateuxuy(coefficientmatrix, N, Lx, x, l, m)
+function calculateuxuy(coefficientmatrix, N, Lx, x, m)
 
     uxstep = zeros(2*N+1, m-2)
 
@@ -118,7 +120,7 @@ function calculateuxuy(coefficientmatrix, N, Lx, x, l, m)
 
 end
 
-function setinitialu(N, F, l, m, y, Ly, T)
+function setinitialu(N, F, m, y, Ly, T)
     
     ux = zeros(2*N+1, m, T)
 
@@ -159,30 +161,30 @@ function rk2(coefficientmatrix, dt, K1matrix, K2matrix,  N, factor, K, μ, y)
 end
 
 
-function rk4(coefficientmatrix, dt, K1matrix, K2matrix, K3matrix, K4matrix, N, factor, K, μ, y)
+function rk4(coefficientmatrix, dt, Kmatrix, N, factor, K, μ, y)
 
 
-    K1matrix = timederivatives(coefficientmatrix, K1matrix,  factor, K, μ , N, y)
+    Kmatrix[1] = timederivatives(coefficientmatrix, Kmatrix[1],  factor, K, μ , N, y)
 
 
-    K2matrix = timederivatives(coefficientmatrix + dt/2 * K1matrix, K2matrix,  factor, K, μ , N, y)
+    Kmatrix[2] = timederivatives(coefficientmatrix + dt/2 * Kmatrix[1], Kmatrix[2],  factor, K, μ , N, y)
 
 
-    K3matrix = timederivatives(coefficientmatrix + dt/2 * K2matrix, K3matrix,  factor, K, μ , N, y)
+    Kmatrix[3] = timederivatives(coefficientmatrix + dt/2 * Kmatrix[2], Kmatrix[3],  factor, K, μ , N, y)
 
 
-    K4matrix = timederivatives(coefficientmatrix + dt * K3matrix, K4matrix,  factor, K, μ , N, y)
+    Kmatrix[4] = timederivatives(coefficientmatrix + dt * Kmatrix[3], Kmatrix[4],  factor, K, μ , N, y)
 
 
-    coefficientmatrix += dt/6 * (K1matrix + 2 * K2matrix + 2 * K3matrix + K4matrix)
+    coefficientmatrix += dt/6 * (Kmatrix[1] + 2 * Kmatrix[2] + 2 * Kmatrix[3] + Kmatrix[4])
 
 
     return coefficientmatrix
 
 end
 
-function sumulation(N::Int, dy::Float64, l::Int, Lx::Int, Ly::Int, F::Float64, T::Int, dt::Float64, K::Float64, μ::Float64)
-    x, y, m, ux, uy, factors, coefficientmatrix, K1matrix, K2matrix, K3matrix, K4matrix, savecoefficients = initialzsystem(dy, l, N, Lx, Ly, F, T)
+function sumulation(N::Int, dy::Float64, Lx::Int, Ly::Int, F::Float64, T::Int, dt::Float64, K::Float64, μ::Float64)
+    x, y, m, ux, uy, factors, coefficientmatrix, Kmatrix, savecoefficients = initialzsystem(dy, N, Lx, Ly, F, T)
 
     savecoefficients[:, :, :, 1] = coefficientmatrix
 
@@ -192,9 +194,9 @@ function sumulation(N::Int, dy::Float64, l::Int, Lx::Int, Ly::Int, F::Float64, T
 
         #coefficientmatrix = rk2(coefficientmatrix, dt, K1matrix, K2matrix, N, factors, K, μ, y)
 
-        coefficientmatrix = rk4(coefficientmatrix, dt, K1matrix, K2matrix, K3matrix, K4matrix, N, factors, K, μ,y)
+        coefficientmatrix = rk4(coefficientmatrix, dt, Kmatrix, N, factors, K, μ,y)
 
-        ux[:, 2:end-1, i], uy[:, 2:end-1, i] = calculateuxuy(coefficientmatrix, N, Lx, x, l, m)
+        ux[:, 2:end-1, i], uy[:, 2:end-1, i] = calculateuxuy(coefficientmatrix, N, Lx, x, m)
 
         savecoefficients[:, :, :, i] = coefficientmatrix
 

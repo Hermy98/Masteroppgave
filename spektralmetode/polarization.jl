@@ -1,4 +1,4 @@
-include("spektralmetode.jl")
+
 
 
 function polarisationtimederivs(polarisatincoefficients, Dmatrix, factor, λ, y, N)
@@ -91,7 +91,7 @@ function initialcondition(N, F, m, y, Ly, T)
 
     for i in 1:2*N+1
 
-        ϕ[i, :, 1] =  F * sin.(((2 * π )/Ly)*y)
+        ϕ[i, :, 1] =  rand(1:10) * sin.(((2 * π )/Ly)*y)
 
         # ϕ[10, 10, 1] = 1000        
 
@@ -178,15 +178,10 @@ function runsystem(N::Int, dy::Float64, Lx::Int, Ly::Int, F::Float64, T::Int, dt
 
     end
 
-    return x, y, ϕ
+    return x, y, ϕ, factors, m
 
 end
 
 
-@time x, y, ϕ = runsystem(10, 1., 40, 20, 10. ,10000, 0.001, 0.1)
 
-
-#heatmap(x, y, ϕ[:, :, 1])
-
-animation_2d(cos.(ϕ), sin.(ϕ), x, y, 10000, 30)
 

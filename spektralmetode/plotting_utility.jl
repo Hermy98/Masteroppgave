@@ -9,7 +9,7 @@ function prefactors(Lx::Int,N::Int)
 end
 
 
-function divergence(ux, uy, x, y, T, K , μ,  energy)
+function divergence(ux, uy, x, y, T, K , μ,  energy) #må skrives om for å sørge for at energien blir riktig
 
     divergence_t = deepcopy(ux)
 
