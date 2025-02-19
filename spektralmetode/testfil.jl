@@ -10,8 +10,7 @@ include("Activesystem.jl")
 
 
 
-@time x, y, ϕ, factors, m = runsystem(10, 1., 40, 20, 1., 20000, 0.001, 2.)
 
-#animation_1d(ϕ ,x, y, 20000, 30)
+@time ux, uy, ϕ, x, y = run_activesystem(10, 1., 40, 20, 10., 100000, 0.001, 0.1, 5., 2., 0.1)
 
-animation_2d(cos.(ϕ), sin.(ϕ), x, y, 20000, 30)
+animation_2d(ux, uy, x, y, 100000, 30)

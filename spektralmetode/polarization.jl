@@ -5,7 +5,7 @@ function polarisationtimederivs(polarisatincoefficients, Dmatrix, factor, λ, y,
 
     for n in 1:N+1
 
-        fn_doublederiv, gn_doublederiv = interpolatderivpolar(polarisatincoefficients, y)
+        fn_doublederiv, gn_doublederiv = interpolatderivpolar(polarisatincoefficients, y, n)
 
         Dmatrix[2:end-1, 1, n] = λ*( -(factor[n]^2) * polarisatincoefficients[2:end-1, 1, n] + fn_doublederiv[2:end-1])
 
@@ -25,41 +25,17 @@ function polarisationtimederivs(polarisatincoefficients, Dmatrix, factor, λ, y,
 
 end
 
+# function elastictimederivs(elcoefficientmatrix, Kmatrix, factor, K, μ, y, n)
 
-function polarisationtimederivs_2(polarisatincoefficients, Dmatrix, factor, λ, y)
+#     an_deriv, bn_deriv, cn_deriv, dn_deriv, an_doublederiv, bn_doublederiv, cn_doublederiv, dn_doublederiv = initerpolatderivate(elcoefficientmatrix, y, n)
 
-    fn_doublederiv, gn_doublederiv = interpolatderivpolar(polarisatincoefficients, y)
+#     Kmatrix[2:end-1, 1,  n] =  μ * an_doublederiv[2:end-1] - (K + μ) * (factor[n])^2 * elcoefficientmatrix[2:end-1, 1, n] + K  * factor[n] * dn_deriv[2:end-1]
 
-    Dmatrix[2:end-1, 1] = λ*( -(factor^2) * polarisatincoefficients[2:end-1, 1] + fn_doublederiv[2:end-1])
+#     Kmatrix[2:end-1, 2, n] = μ * bn_doublederiv[2:end-1] - (K + μ) * (factor[n])^2 * elcoefficientmatrix[2:end-1, 2, n]  - K  * factor[n] * cn_deriv[2:end-1]
 
-    Dmatrix[2:end-1, 2] = λ*( -(factor^2) * polarisatincoefficients[2:end-1, 2] + gn_doublederiv[2:end-1])
+#     Kmatrix[2:end-1, 3, n] = (K +  μ) * cn_doublederiv[2:end-1] - μ * (factor[n])^2 * elcoefficientmatrix[2:end-1, 3, n] + K * factor[n] * bn_deriv[2:end-1]
 
-    Dmatrix[1, 1] = λ*( (- factor^2) * polarisatincoefficients[1, 1] + (-2*polarisatincoefficients[1, 1] + 2*polarisatincoefficients[2, 1]))
-
-    Dmatrix[1, 2] = λ*( (- factor^2) * polarisatincoefficients[1, 2] + (-2*polarisatincoefficients[1, 2] + 2* polarisatincoefficients[2, 2]))
-
-    Dmatrix[end, 1] = λ* ((- factor^2) * polarisatincoefficients[end, 1] + (-2*polarisatincoefficients[end, 1] +2* polarisatincoefficients[end-1, 1]))
-
-    Dmatrix[end, 2] = λ* ((- factor^2) * polarisatincoefficients[end, 2] + (-2*polarisatincoefficients[end, 2] +2* polarisatincoefficients[end-1, 2]))
-
-    
-
-    return Dmatrix
-
-end
-
-
-# function elastictimederivs(elcoefficientmatrix, Kmatrix, factor, K, μ, y)
-
-#     an_deriv, bn_deriv, cn_deriv, dn_deriv, an_doublederiv, bn_doublederiv, cn_doublederiv, dn_doublederiv = initerpolatderivate(elcoefficientmatrix, y)
-
-#     Kmatrix[2:end-1, 1] =  μ * an_doublederiv[2:end-1] - (K + μ) * (factor)^2 * elcoefficientmatrix[2:end-1, 1] + K  * factor * dn_deriv[2:end-1]
-
-#     Kmatrix[2:end-1, 2] = μ * bn_doublederiv[2:end-1] - (K + μ) * (factor)^2 * elcoefficientmatrix[2:end-1, 2]  - K  * factor * cn_deriv[2:end-1]
-
-#     Kmatrix[2:end-1, 3] = (K +  μ) * cn_doublederiv[2:end-1] - μ * (factor)^2 * elcoefficientmatrix[2:end-1, 3] + K * factor * bn_deriv[2:end-1]
-
-#     Kmatrix[2:end-1, 4] = (K + μ)* dn_doublederiv[2:end-1] - μ * (factor)^2 * elcoefficientmatrix[2:end-1, 4] - K * factor * an_deriv[2:end-1] 
+#     Kmatrix[2:end-1, 4, n] = (K + μ)* dn_doublederiv[2:end-1] - μ * (factor[n])^2 * elcoefficientmatrix[2:end-1, 4, n] - K * factor[n] * an_deriv[2:end-1] 
 
 #     return Kmatrix
 
@@ -70,9 +46,9 @@ end
 
 #     for i in 1:N+1
 
-#         Dmatrix[:, :, i] = polarisationtimederivs(polarisationtioncoefficients[:, :, i], Dmatrix[:, :, i], factor[i], λ, y)
+#         Dmatrix[:, :, i] = polarisationtimederivs(polarisationtioncoefficients, Dmatrix[:, :, i], factor, λ, y)
 
-#         #Kmatrix[:, :, i] = elastictimederivs(elcoefficientmatrix[:, :, i], Kmatrix[:, :, i], factor[i], K, μ, y)
+#         #Kmatrix[:, :, i] = elastictimederivs(elcoefficientmatrix, Kmatrix, factor, K, μ, y, i)
 
 
 #     end
