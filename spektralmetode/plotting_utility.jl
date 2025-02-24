@@ -92,7 +92,7 @@ function animation_2d(u_x, u_y, x, y, numiter, framerate)
 
 
 
-    record(fig, "animation.mp4", 1:50:numiter; framerate = framerate) do i
+    record(fig, "animation10.mp4", 1:50:numiter; framerate = framerate) do i
       iplot[] = i
 
       sleep(0.05)
@@ -131,7 +131,7 @@ function animation_1d(u, x, y, numiter, framerate)
     
     # end
 
-    record(fig2, "animation3.mp4", 1:5:numiter; framerate = framerate) do i
+    record(fig2, "animation3.mp4", 1:50:numiter; framerate = framerate) do i
      iplot1d[] = i
 
      sleep(0.05)
