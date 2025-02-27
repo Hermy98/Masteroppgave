@@ -72,6 +72,14 @@ function initialcondition_active(N, F, F_a, m, y, Ly, T)
 
         uy[i, :, 1] = F*sin.(((2 * π )/(Ly))*y ) + F_a * sin.(ϕ[i, :, 1])
 
+        ux[:, 1, 1] .= 0
+
+        ux[:, end, 1] .= 0
+
+        uy[:, 1, 1] .= 0
+
+        uy[:, end, 1] .= 0
+
         #ux[i, :, 1] = F*y.^3
 
         #uy[i, :, 1] = F*y.^3 .*sin.(((2 * π )/(Ly))*y )
@@ -134,7 +142,6 @@ function derivativepolar_active(polarisatincoefficients, y)
 
     spilnes = [Spline1D(y, polarisatincoefficients[:, j]) for j in 1:2]
 
-
     derivativ = [derivative(spline, y, nu =2) for spline in spilnes]
 
     return derivativ[1], derivativ[2]
@@ -150,13 +157,9 @@ function polarisationtimederivs_active(polarisatincoefficients, Dmatrix, nonline
 
     Dmatrix[2:end-1, 2] = nonlinear_active[2:end-1, 2]  + λ*( -(factor^2) * polarisatincoefficients[2:end-1, 2] + gn_doublederiv[2:end-1])
 
-    Dmatrix[1, :] = nonlinear_active[1, :]  + λ*(- factor^2) * polarisatincoefficients[1, :] #+ (-2*polarisatincoefficients[1, :] + 2*polarisatincoefficients[2, :]))
+    Dmatrix[1, :] = 0*nonlinear_active[1, :]  +  0*λ*(- factor^2) * polarisatincoefficients[1, :] #+ (-2*polarisatincoefficients[1, :] + 2*polarisatincoefficients[2, :]))
 
-    Dmatrix[end, :] = nonlinear_active[end, :]  + λ* (- factor^2) * polarisatincoefficients[end, :] #+ (-2*polarisatincoefficients[end, :] +2* polarisatincoefficients[end-1, :]))
-
-   
-
-    
+    Dmatrix[end, :] = 0*nonlinear_active[end, :]  +  0*λ* (- factor^2) * polarisatincoefficients[end, :] #+ (-2*polarisatincoefficients[end, :] +2* polarisatincoefficients[end-1, :]))
 
     return Dmatrix
 
@@ -176,16 +179,16 @@ function elastictimederivs_active(elcoefficientmatrix, Kmatrix, factor, K, μ, y
     Kmatrix[2:end-1, 4] = (K + μ)* dn_doublederiv[2:end-1] - μ * (factor)^2 * elcoefficientmatrix[2:end-1, 4] - K * factor * an_deriv[2:end-1] + active_contribution[2:end-1, 4]
 
 
-    Kmatrix[1, :] = active_contribution[1, :]
+    Kmatrix[1, :] =  0*active_contribution[1, :]
 
-    Kmatrix[end, :] = active_contribution[end, :]
+    Kmatrix[end, :] = 0*active_contribution[end, :]
 
 
     return Kmatrix
 
 end
 
-function velocity_firststep(ux, uy, μ, K, ϕ, F_a, dt_u)
+function velocity_firststep(ux, uy, x, y, μ, K, ϕ, F_a, dt_u)
 
     ux_spline = Spline2D(x, y, ux)
 
@@ -207,6 +210,11 @@ function velocity_firststep(ux, uy, μ, K, ϕ, F_a, dt_u)
 
     dt_u[:, :, 2] = μ*(uy_xxderiv + uy_yyderiv) + K*(ux_xyderiv + uy_yyderiv) + F_a*sin.(ϕ)
 
+    dt_u[:, 1, :] .= 0
+
+    dt_u[:, end, :] .= 0
+
+
     return dt_u
     
 
@@ -218,10 +226,8 @@ function velocity(ux, uy, dt_u, dt, i)
 
     dt_u[:, :, 2] = (uy[:, :, i-1] - uy[:, :, i-2])/dt
 
-    dt_u[1, :, :] .= 0
-    dt_u[end, :, :] .= 0
-
-
+    dt_u[:, end, :] .= 0
+    dt_u[:, 1, :] .= 0
 
     return dt_u
 
@@ -267,7 +273,7 @@ function fouriertransform_active(ϕ, active_contribution, dt_u, nonlinear_active
 
         active_contribution[i , :, :] = ϕ_transform(ϕ[:, i], active_contribution[i, :, :], N, F_a)
 
-        nonlinear_active[i, :, :] = non_lineartransform(dt_u[i, :, :], ϕ[:, i], nonlinear_active[i, :, :], N, ξ)
+        nonlinear_active[i, :, :] = non_lineartransform(dt_u[:, i, :], ϕ[:, i], nonlinear_active[i, :, :], N, ξ)
 
 
     end
@@ -356,6 +362,8 @@ function run_activesystem(N::Int, dy::Float64, Lx::Int, Ly::Int, F::Float64, T::
 
     dt_u = zeros(2*N+1, m, 2)
 
+    dt_u = velocity_firststep(ux[:, :, 1], uy[:, :, 1], x, y, μ, K, ϕ[:, :, 1], F_a, dt_u)
+
 
     active_contribution, nonlinear_active = fouriertransform_active(ϕ[:, :, 1], active_contribution, dt_u, nonlinear_active, N, m, F_a, ξ)
     
@@ -380,8 +388,9 @@ function run_activesystem(N::Int, dy::Float64, Lx::Int, Ly::Int, F::Float64, T::
 
     end
 
-    return ux, uy, ϕ, x, y
+    return ux, uy, ϕ, x, y, m
 
 end
+
 
 
