@@ -4,7 +4,7 @@ prefactor(L::Int, n::Int) = (2*π * n)/L
 
 function prefactors(Lx::Int,N::Int)
     
-    return [prefactor(Lx, n) for n in 0:N+1 ]
+    return [prefactor(Lx, n) for n in 1:N]
 
 end
 
@@ -64,7 +64,7 @@ end
 
 
 
-function animation_2d(u_x, u_y, x, y, numiter, framerate)
+function animation_2d(u_x, u_y, ϕ, x, y, numiter, framerate)
 
     fig = Figure(size = (800, 800))
 
@@ -76,7 +76,12 @@ function animation_2d(u_x, u_y, x, y, numiter, framerate)
 
     uy = @lift(u_y[:, :, $iplot])
 
-    GLMakie.arrows!(x, y, ux, uy, arrowsize = 10, lengthscale = 0.1)
+    px = @lift(cos.(ϕ[:, :, $iplot]))
+
+    py = @lift(sin.(ϕ[:, :, $iplot]))
+
+    GLMakie.arrows!(x, y, ux, uy, arrowsize = 10)
+    GLMakie.arrows!(x, y, px, py, arrowsize = 10, color = :red)
 
     display(fig)
 
@@ -92,7 +97,7 @@ function animation_2d(u_x, u_y, x, y, numiter, framerate)
 
 
 
-    record(fig, "animation4.mp4", 1:50:numiter; framerate = framerate) do i
+    record(fig, "animation1.mp4", 1:10:numiter; framerate = framerate) do i
       iplot[] = i
 
       sleep(0.05)
@@ -131,7 +136,7 @@ function animation_1d(u, x, y, numiter, framerate)
     
     # end
 
-    record(fig2, "animation3.mp4", 1:50:numiter; framerate = framerate) do i
+    record(fig2, "animation11.mp4", 1:10:numiter; framerate = framerate) do i
      iplot1d[] = i
 
      sleep(0.05)

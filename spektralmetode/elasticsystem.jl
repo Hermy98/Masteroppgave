@@ -38,15 +38,17 @@ function initcoefficientmatrix(m::Int, N::Int, ux::Array{Float64, 3}, uy::Array{
 end
 
 
-function initialzsystem(dy::Float64, N::Int, Lx::Int, Ly::Int, F::Float64, T::Int)
+function initialzsystem(dy::Float64, dx::Float64, N::Int, Lx::Int, Ly::Int, F::Float64, T::Int)
 
-    x = LinRange(-Lx/2, Lx/2, 2*N+1)
+    #x = LinRange(-Lx/2, Lx/2, 2*N+1)
+
+    x = -Lx/2:dx:Lx/2
 
     y = -Ly/2:dy:Ly/2
 
     m = length(y)
 
-    ux, uy = setinitialu(N, F, m, y, Ly, T)
+    ux, uy = setinitialu(N, F, m, l, y, Ly, T)
 
     factors = prefactors(Lx, N+1)
 
@@ -116,11 +118,11 @@ function calculateuxuy(coefficientmatrix, N, Lx, x, m)
     end
 
 
-    return (1/(2*N+1))*uxstep, (1/(2*N+1))*uystep
+    return (1/((2*N+1)))*uxstep, (1/((2*N+1)))*uystep
 
 end
 
-function setinitialu(N, F, m, y, Ly, T)
+function setinitialu(N, F, m, l, y, Ly, T)
     
     ux = zeros(2*N+1, m, T)
 
@@ -183,8 +185,8 @@ function rk4(coefficientmatrix, dt, Kmatrix, N, factor, K, μ, y)
 
 end
 
-function sumulation(N::Int, dy::Float64, Lx::Int, Ly::Int, F::Float64, T::Int, dt::Float64, K::Float64, μ::Float64)
-    x, y, m, ux, uy, factors, coefficientmatrix, Kmatrix, savecoefficients = initialzsystem(dy, N, Lx, Ly, F, T)
+function sumulation(N::Int, dy::Float64, dx::Float64,  Lx::Int, Ly::Int, F::Float64, T::Int, dt::Float64, K::Float64, μ::Float64)
+    x, y, m, ux, uy, factors, coefficientmatrix, Kmatrix, savecoefficients = initialzsystem(dy, dx, N, Lx, Ly, F, T)
 
     savecoefficients[:, :, :, 1] = coefficientmatrix
 
