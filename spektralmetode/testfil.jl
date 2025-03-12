@@ -1,4 +1,4 @@
-using LinearAlgebra, CairoMakie, SparseArrays, Integrals, FFTW, Dierckx, GLMakie
+using LinearAlgebra, CairoMakie, SparseArrays, Integrals, FFTW, Dierckx, GLMakie, JLD2
 
 include("plotting_utility.jl")
 
@@ -9,10 +9,10 @@ include("plotting_utility.jl")
 include("Activesystem.jl")
 
 
-@time ux, uy, ϕ, x, y, m = run_activesystem(10, 1., 1.,  21, 40, 1., 50000, 0.001, 5., 2., 1., 0.75, 4.)
+@time ux, uy, ϕ, x, y, m = run_activesystem(10, 1., 1.,  21, 40, 1., 10000, 0.001, 5., 2., 1., 0.75, 4., false)
 
 
-animation_2d(ux, uy, ϕ, x, y, 50000, 30)
+animation_2d(ux, uy, ϕ, x, y, 10000, 30)
 
 #animation_1d(ϕ, x, y, 10000, 30)
 

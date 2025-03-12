@@ -1,13 +1,12 @@
 
-prefactor(L::Int, n::Int) = (2*π * n)/L
+prefactor(L::Int, n::Int) = (2*π*n)/L
 
 
 function prefactors(Lx::Int,N::Int)
     
-    return [prefactor(Lx, n) for n in 1:N]
+    return [prefactor(Lx, n) for n in 0:N]
 
 end
-
 
 function divergence(ux, uy, x, y, T, K , μ,  energy) #må skrives om for å sørge for at energien blir riktig
 
@@ -142,5 +141,11 @@ function animation_1d(u, x, y, numiter, framerate)
      sleep(0.05)
 
     end
+
+end
+
+function savedata(u_x::Array{Float64, 3}, u_y::Array{Float64, 3}, ϕ::Array{Float64, 3}, x::StepRangeLen, y::StepRangeLen, constants::Vector, flilename::String)
+
+    jdlsave(flilename, u_x, u_y, ϕ, x, y, constants)
 
 end
