@@ -12,6 +12,8 @@ function divergence(ux, uy, x, y, T, K , μ,  energy) #må skrives om for å sø
 
     divergence_t = deepcopy(ux)
 
+    curl_t = deepcopy(ux)
+
     if energy == true
 
         defenergy_t = deepcopy(ux)
@@ -29,7 +31,15 @@ function divergence(ux, uy, x, y, T, K , μ,  energy) #må skrives om for å sø
 
         uy_deriv = derivative(uy_spline, x, y, nux = 0, nuy = 1)
 
+        ux_yderiv = derivative(ux_spline, x, y, nux = 0, nuy = 1)
+
+        uy_xderiv = derivative(uy_spline, x, y, nux = 1, nuy = 0)
+
         divergence_t[:, :, i] = ux_deriv + uy_deriv
+
+        curl_t[:, :, i] = (uy_xderiv - ux_yderiv)
+
+        
 
 
         if energy == true
@@ -48,11 +58,11 @@ function divergence(ux, uy, x, y, T, K , μ,  energy) #må skrives om for å sø
 
     if energy == true
 
-        return divergence_t, defenergy_t
+        return divergence_t, curl_t, defenergy_t
 
     else
 
-        return divergence_t
+        return divergence_t, curl_t
 
     end
 
@@ -75,12 +85,12 @@ function animation_2d(u_x, u_y, ϕ, x, y, numiter, framerate)
 
     uy = @lift(u_y[:, :, $iplot])
 
-    px = @lift(cos.(ϕ[:, :, $iplot]))
+    # px = @lift(cos.(ϕ[:, :, $iplot]))
 
-    py = @lift(sin.(ϕ[:, :, $iplot]))
+    # py = @lift(sin.(ϕ[:, :, $iplot]))
 
     GLMakie.arrows!(x, y, ux, uy, arrowsize = 10)
-    GLMakie.arrows!(x, y, px, py, arrowsize = 10, color = :red)
+    #GLMakie.arrows!(x, y, px, py, arrowsize = 10, color = :red)
 
     display(fig)
 
@@ -96,7 +106,7 @@ function animation_2d(u_x, u_y, ϕ, x, y, numiter, framerate)
 
 
 
-    record(fig, "animation1.mp4", 1:10:numiter; framerate = framerate) do i
+    record(fig, "animation4.mp4", 1:10:numiter; framerate = framerate) do i
       iplot[] = i
 
       sleep(0.05)
@@ -136,6 +146,40 @@ function animation_1d(u, x, y, numiter, framerate)
     # end
 
     record(fig2, "animation11.mp4", 1:10:numiter; framerate = framerate) do i
+     iplot1d[] = i
+
+     sleep(0.05)
+
+    end
+
+end
+
+
+function animation_arrows2(u, x, y, numiter, framerate)
+
+    fig3 = Figure(size = (800, 800))
+
+    ax3 = Axis(fig3[1, 1], aspect=  1)
+
+    iplot1d = Observable(1)
+
+
+    uplot3 = @lift(u[:, :, $iplot1d])
+
+    GLMakie.arrows!(x, y, uplot3, arrowsize = 10)
+
+
+    display(fig3)
+
+    # for i in 1:numiter
+
+    #     iplot1d[] = i
+
+    #     sleep(0.05)
+    
+    # end
+
+    record(fig3, "animation4.mp4", 1:10:numiter; framerate = framerate) do i
      iplot1d[] = i
 
      sleep(0.05)

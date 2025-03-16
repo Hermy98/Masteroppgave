@@ -67,7 +67,11 @@ function initialcondition_active(F::Float64, F_a::Float64, m::Int, l::Int,y::Ste
     
     for i in 1:l
 
-       ϕ[i, :, 1] .= sin.(((2 * π)/Ly)*y )
+       ϕ[i, :, 1] = sin.(((2 * π)/Ly)*y)
+
+       ux[i, :, 1] = sin.(((2 * π)/Ly)*y)
+
+       uy[i, :, 1] = sin.(((2 * π)/Ly)*y)
 
 
     end 
