@@ -24,3 +24,5 @@ docs/site/
 Manifest.toml
 
 *.mp4
+*.jld2
+*.png

@@ -1,6 +1,8 @@
-using LinearAlgebra, CairoMakie, SparseArrays, Integrals, FFTW, Dierckx, GLMakie, JLD2
+using LinearAlgebra, CairoMakie, SparseArrays, Integrals, FFTW, Dierckx, GLMakie, FileIO
 
-include("plotting_utility.jl")
+include("plottingfunctions.jl")
+
+include("Utility.jl")
 
 #include("elasticsystem.jl")
 
@@ -9,29 +11,40 @@ include("plotting_utility.jl")
 include("Activesystem.jl")
 
 
-@time ux, uy, ϕ, x, y, m = run_activesystem(10, 1., 1.,  21, 40, 1., 60000, 0.001, 5., 4., 1., 0.75, 4., true)
+# @time ux, uy, ϕ, x, y, m , l = run_activesystem(10, 1., 1.,  21, 40, 1., 30000, 0.001, 5., 4., 2., 0.75, 3., false)
+
+# circularmeant = circularmean_t(ϕ, 30000)
+
+# plot_orderparameter(circularmeant, 30000, "circularmean.png")
+
+# animation_polarisation(ϕ, x, y, 30000, 30, "polarisation6.mp4")
 
 
-animation_2d(ux, uy, ϕ, x, y, 60000, 30)
+# print(rad2deg(circularmeant[30000]))
 
 
-divu, curl_u = divergence(ux, uy, x, y, 60000, 1., 1., false)
 
-animation_1d(curl_u, x, y, 60000, 30)
+angle = getendangel(10, 1., 1.,  21, 40, 1., 20000, 0.001, 5., 4., 2., 0.75, 3., false)
 
-#animation_1d(ϕ, x, y, 10000, 30)
+print(rad2deg.(angle))
 
-# fig  = Figure(size = (800, 800))
+# animation_deformation(ux, uy, x, y, 30000, 30, "deformation6.mp4")
 
-# ax1 = Axis(fig[1, 1])
+# orderparameter_t = orderparameter(ϕ, m*l, 50000)
 
-# ax2 = Axis(fig[1, 2])
+# plot_orderparameter(orderparameter_t, 50000, "orderparameter6.png")
 
-# arrows!(ax1, x, y, ux[:, :, 2], uy[:, :, 2])
 
-# arrows!(ax2, x, y,ux[:, :, 3], uy[:, :, 3], color = :red)
 
-# display(fig)
+# #fig  = Figure(size = (800, 800))
+
+#xisweep(10, 1., 1.,  21, 40, 1., 100000, 0.001, 5., 4., 2., 0.75, true)
+
+
+
+
+
+
 
 
 

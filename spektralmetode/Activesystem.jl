@@ -18,8 +18,8 @@ function initalize_active(dy::Float64, dx::Float64, N::Int, Lx::Int, Ly::Int, F:
 
     Kmatrix = initialze_kmatrix(m, N)
 
-    return x, y, m, l, ϕ, ux, uy,factors, elcoefficientmatrix, Kmatrix, polarisationtioncoefficients, Dmatrix
 
+    return x, y, m, l, ϕ, ux, uy,factors, elcoefficientmatrix, Kmatrix, polarisationtioncoefficients, Dmatrix
 end
 
 function initialize_dmatrix(m::Int, N::Int)
@@ -65,14 +65,12 @@ function initialcondition_active(F::Float64, F_a::Float64, m::Int, l::Int,y::Ste
 
     ϕ = zeros(l, m, T)
     
-    for i in 1:l
 
-       ϕ[i, :, 1] = sin.(((2 * π)/Ly)*y)
+    for i in 1:m
 
-       ux[i, :, 1] = sin.(((2 * π)/Ly)*y)
+        
 
-       uy[i, :, 1] = sin.(((2 * π)/Ly)*y)
-
+        ϕ[:, i, 1] .= rand(0:2π)
 
     end 
 
@@ -160,8 +158,6 @@ end
 
 function polarisationtimederivs_periodic(polarisatincoefficients::Array{Float64, 2}, Dmatrix::Array{Float64, 2}, nonlinear_active::Array{Float64, 2}, factor::Float64, λ::Float64, y::StepRangeLen)
 
-    fn_doublederiv, gn_doublederiv = derivativepolar_active(polarisatincoefficients, y)
-
     Dmatrix[2:end-1, 1] = nonlinear_active[2:end-1, 1]  
 
     Dmatrix[2:end-1, 2] = nonlinear_active[2:end-1, 2]  
@@ -183,9 +179,9 @@ function polarisationtimederivs_zero(polarisatincoefficients::Array{Float64, 2},
 
     Dmatrix[2:end-1,  2] = nonlinear_active[2:end-1, 2]  + λ*( -(factor^2) * polarisatincoefficients[2:end-1, 2] + gn_doublederiv[2:end-1])
 
-    Dmatrix[1, :] = λ*((- factor^2) * polarisatincoefficients[1, :] + (-2*polarisatincoefficients[1, :] + 2*polarisatincoefficients[2, :]))
+    Dmatrix[1, :] = λ*((- factor^2) * polarisatincoefficients[1, :] + (-2*polarisatincoefficients[1, :] + 2*polarisatincoefficients[2, :]))  #(2*polarisatincoefficients[1, :] -5*polarisatincoefficients[2, :] + 4*polarisatincoefficients[3, :] - polarisatincoefficients[4, :]))
 
-    Dmatrix[end, :] = λ * ((- factor^2) * polarisatincoefficients[end, :] + (-2*polarisatincoefficients[end, :] + 2*polarisatincoefficients[end-1, :]))
+    Dmatrix[end, :] = λ * ((- factor^2) * polarisatincoefficients[end, :] + ( -2*polarisatincoefficients[end, :] + 2*polarisatincoefficients[end-1, :])) #(2*polarisatincoefficients[end, :] -5*polarisatincoefficients[end-1, :] + 4*polarisatincoefficients[end-2, :] - polarisatincoefficients[end-3, :]))
 
     return Dmatrix
 
@@ -209,6 +205,8 @@ function elastictimederivs_periodic(elcoefficientmatrix::Matrix{Float64}, Kmatri
     return Kmatrix
 
 end
+
+
 
 function elastictimederivs_zero(elcoefficientmatrix::Matrix{Float64}, Kmatrix::Matrix{Float64}, factor::Float64, K::Float64, μ::Float64, y::StepRangeLen, active_contribution::Matrix{Float64})
 
@@ -256,11 +254,6 @@ function velocity_firststep(ux::Matrix{Float64}, uy::Matrix{Float64}, x::StepRan
 
     dt_u[:, :, 2] = μ * (uy_xxderiv + uy_yyderiv) + (K + (1/2)*μ) * (ux_xyderiv + uy_yyderiv) + F_a*sin.(ϕ)
 
-    if BC0 == true
-        dt_u[:, 1, :] .= 0 #for boundry conditions u = 0
-        dt_u[:, end, :] .= 0 #for boundry conditions u = 0
-    end
-
     return dt_u
     
 
@@ -300,12 +293,11 @@ end
 
 function non_lineartransform(dt_u::Array{Float64, 2}, ϕ::Array{Float64, 1}, non_linearactive::Array{Float64, 2}, N::Int, ξ::Float64)
 
-    fftU = fft(-ξ* sin.(ϕ) .* dt_u[:, 1])
-    fftU2 = fft(ξ* cos.(ϕ) .* dt_u[:, 2])
+    fftU = fft(-ξ* sin.(ϕ) .* dt_u[:, 1] + ξ* cos.(ϕ) .* dt_u[:, 2])
 
-    non_linearactive[1, :] = real.(fftU)[1:N+1] + real.(fftU2)[1:N+1]
+    non_linearactive[1, :] = real.(fftU)[1:N+1]
 
-    non_linearactive[2, :] = imag.(fftU)[1:N+1] + imag.(fftU2)[1:N+1]
+    non_linearactive[2, :] = imag.(fftU)[1:N+1]
 
 
     return non_linearactive
@@ -343,7 +335,7 @@ function runge_kuttastep(elcoefficientmatrix::Array{Float64, 3}, Kmatrix::Array{
      end
 
     elseif BC0 == false
-        for i in 1:N+1 #zeroth mode does not change in time
+        for i in 1:N+1
 
             Dmatrix[:, :, i] = polarisationtimederivs_periodic(polarisationtioncoefficients[:, :, i], Dmatrix[:, :, i], nonlinear_active[:, :, i], factor[i], λ, y)
 
@@ -397,7 +389,7 @@ function calculateuxuy_active(elcoefficientmatrix::Array{Float64, 3}, polarisati
 
         for i in 2:N+1 
 
-            ϕ[:, j] += polarisationtioncoefficients[j, 1, i]*cos.(((2 * π * i)/Lx)*x ) + polarisationtioncoefficients[j, 2, i]*sin.(((2 * π * i)/Lx)*x )
+            ϕ[:, j] += polarisationtioncoefficients[j, 1, i]*cos.(((2 * π * i)/Lx)*x ) + polarisationtioncoefficients[j, 2, i]*sin.(((2 * π * i)/Lx)*x ) 
 
             ux[:, j] += (elcoefficientmatrix[j, 1, i] * cos.(((2 * π * i)/Lx)*x ) + elcoefficientmatrix[j, 2, i] * sin.(((2 * π * i)/Lx)*x ))
 
@@ -408,7 +400,7 @@ function calculateuxuy_active(elcoefficientmatrix::Array{Float64, 3}, polarisati
 
     end
 
-    return (1/N)*ux, (1/N)*uy, (1/N)*ϕ# ux, uy, ϕ 
+    return (1/(2*N))*ux, (1/(2*N))*uy, (1/(2*N))ϕ# ux, uy, ϕ 
 
 end
 
@@ -418,17 +410,17 @@ function run_activesystem(N::Int, dy::Float64, dx::Float64, Lx::Int, Ly::Int, F:
 
     x, y, m, l, ϕ, ux, uy, factors, elcoefficientmatrix, Kmatrix, polarisationtioncoefficients, Dmatrix = initalize_active(dy, dx, N, Lx, Ly, F, F_a, T, BC0)
 
-    ux[:, :, 1], uy[:, :, 1], ϕ[:, :, 1] = calculateuxuy_active(elcoefficientmatrix, polarisationtioncoefficients, N, Lx, x, m, ux[:, :, 1], uy[:, :, 1], ϕ[:, :, 1], l, 1, dt)
-
     active_contribution = zeros(m, 4, N+1)
 
     nonlinear_active = zeros(m, 2, N+1)
 
     dt_u = zeros(l, m, 2)
 
-    dt_u = velocity_firststep(ux[:, :, 1], uy[:, :, 1], x, y, μ, K, ϕ[:, :, 1], F_a, dt_u, BC0)
+    ux[:, :, 1], uy[:, :, 1], ϕ[:, :, 1] = calculateuxuy_active(elcoefficientmatrix, polarisationtioncoefficients, N, Lx, x, m, ux[:, :, 1], uy[:, :, 1], ϕ[:, :, 1], l, 1, dt)
 
     active_contribution, nonlinear_active = fouriertransform_active(ϕ[:, :, 1], active_contribution, dt_u, nonlinear_active, N, m, F_a, ξ)
+
+    
     
     elcoefficientmatrix, polarisationtioncoefficients = rk4_active(elcoefficientmatrix, Kmatrix, polarisationtioncoefficients, Dmatrix, dt, N, factors, K, μ, λ, y, active_contribution, nonlinear_active, BC0)
 
@@ -439,9 +431,7 @@ function run_activesystem(N::Int, dy::Float64, dx::Float64, Lx::Int, Ly::Int, F:
 
     for i in 3:T
 
-        dt_u = velocity_firststep(ux[:, :, i-1], uy[:, :, i-1], x, y, μ, K, ϕ[:, :, i-1], F_a, dt_u, BC0)
-
-        #dt_u = velocity(ux, uy, dt_u, dt, i)
+        dt_u = velocity(ux, uy, dt_u, dt, i)
 
         active_contribution, nonlinear_active = fouriertransform_active(ϕ[:, :, i-1], active_contribution, dt_u, nonlinear_active, N, m, F_a, ξ)
 
@@ -452,7 +442,7 @@ function run_activesystem(N::Int, dy::Float64, dx::Float64, Lx::Int, Ly::Int, F:
 
     end
 
-    return ux, uy, ϕ, x, y, m
+    return ux, uy, ϕ, x, y, m, l
 
 end
 
