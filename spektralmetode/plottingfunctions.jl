@@ -24,7 +24,7 @@ function animation_deformation(u_x, u_y, x, y, numiter, framerate, filename)
 
 
 
-    record(fig, filename, 1:10:numiter; framerate = framerate) do i
+    record(fig, filename, 1:20:numiter; framerate = framerate) do i
       iplot[] = i
 
       sleep(0.05)
@@ -49,7 +49,7 @@ function animation_polarisation(ϕ, x, y, numiter, framerate, filename)
     GLMakie.arrows!(x, y, px, py, arrowsize = 10, color = :red)
 
 
-    record(fig, filename, 1:10:numiter; framerate = framerate) do i
+    record(fig, filename, 1:20:numiter; framerate = framerate) do i
       iplot[] = i
 
       sleep(0.05)
@@ -59,7 +59,7 @@ function animation_polarisation(ϕ, x, y, numiter, framerate, filename)
 end
 
 
-function animation_1d(u, x, y, numiter, framerate)
+function animation_heatmap(u, x, y, numiter, framerate, filename)
 
     fig2 = Figure(size = (800, 800))
 
@@ -67,47 +67,11 @@ function animation_1d(u, x, y, numiter, framerate)
 
     iplot1d = Observable(1)
 
-    min = minimum(u)
-
-    max = maximum(u)
-
     uplot = @lift(u[:, :, $iplot1d])
 
-    GLMakie.heatmap!(x, y, uplot, colorrange = (min, max), colormap = :jet1)
+    GLMakie.heatmap!(x, y, uplot, colorrange = (-π, π), colormap = :hsv)
 
-    GLMakie.Colorbar(fig2[1, 2], limits = (min, max), colormap = :jet1)
-
-
-    # for i in 1:numiter
-
-    #     iplot1d[] = i
-
-    #     sleep(0.05)
-    
-    # end
-
-    record(fig2, "animation.mp4", 1:10:numiter; framerate = framerate) do i
-     iplot1d[] = i
-
-     sleep(0.05)
-
-    end
-
-end
-
-
-function animation_arrows2(u, x, y, numiter, framerate)
-
-    fig3 = Figure(size = (800, 800))
-
-    ax3 = Axis(fig3[1, 1], aspect=  1)
-
-    iplot1d = Observable(1)
-
-
-    uplot3 = @lift(u[:, :, $iplot1d])
-
-    GLMakie.arrows!(x, y, uplot3, arrowsize = 10)
+    GLMakie.Colorbar(fig2[1, 2], limits = (-π, π), colormap = :hsv)
 
 
     # for i in 1:numiter
@@ -118,7 +82,7 @@ function animation_arrows2(u, x, y, numiter, framerate)
     
     # end
 
-    record(fig3, "animation1.mp4", 1:10:numiter; framerate = framerate) do i
+    record(fig2, filename, 1:10:numiter; framerate = framerate) do i
      iplot1d[] = i
 
      sleep(0.05)
@@ -126,17 +90,55 @@ function animation_arrows2(u, x, y, numiter, framerate)
     end
 
 end
+
+
+
 
 function plot_orderparameter(orderparameter_t::Vector{Float64}, T::Int, name::String)
 
     fig4 = Figure(size = (800, 800))
 
-    ax4 = Axis(fig4[1, 1])
+    ax4 = Axis(fig4[1, 1], xlabel = "timestep", ylabel = "Φ") 
 
     GLMakie.lines!(1:T, orderparameter_t)
 
     save(name, fig4)
 
 end
+
+function angulardistribution(figname::String, filename::String)
+
+    data = load(filename)
+
+    f = Figure(size = (800, 800))
+
+    ax1 = Axis(f[1, 1], aspect = 1)
+
+    ax2 = Axis(f[1, 2])
+
+    GLMakie.scatter!(ax1,cos.(data["endangle"]), sin.(data["endangle"]), color = :blue)
+
+    GLMakie.hist!(ax2, data["endangle"], bins = 10)
+
+    save(figname, f)
+
+end
+
+
+function plot_heatmap(u, x, y, name)
+
+    fig3 = Figure(size = (800, 800))
+
+    ax3 = Axis(fig3[1, 1])
+
+    GLMakie.heatmap!(x, y, u, colorrange = (-π, π), colormap = :hsv)
+
+    GLMakie.Colorbar(fig3[1, 2], limits = (-π, π), colormap = :hsv)
+
+    save(name, fig3)
+
+end
+
+
 
 

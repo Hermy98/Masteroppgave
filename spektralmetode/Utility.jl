@@ -94,24 +94,29 @@ function savedata(u_x::Array{Float64, 3}, u_y::Array{Float64, 3}, ϕ::Array{Floa
 end
 
 function xisweep(N::Int, dy::Float64, dx::Float64, Lx::Int, Ly::Int, F::Float64, T::Int, dt::Float64, K::Float64, μ::Float64, λ::Float64, F_a::Float64, BC0::Bool)
+    # Create a lock for file operations
+    file_lock = ReentrantLock()
 
-    for i in 0:6
+    # Run simulations in parallel
+    Threads.@threads for i in 0:5:30
+        t = @elapsed begin
+            ux, uy, ϕ, x, y, m, l = run_activesystem(N, dy, dx, Lx, Ly, F, T, dt, K, μ, λ, F_a, Float64(i), BC0)
 
-        @time ux, uy, ϕ, x, y, m, l, = run_activesystem(N, dy, dx, Lx, Ly, F, T, dt, K, μ, λ, F_a, Float64(i) ,BC0)
+            flilename = "simulation1_xi$(i).jld2"
+            constants = [N, m, l, Lx, Ly, F, T, dt, K, μ, λ, F_a, i]
 
-        flilename = "simulation1_xi$(i).jld2"
-
-        constants = [N, m, l, Lx, Ly, F, T, dt, K, μ, λ, F_a, i]
-
-        savedata(ux, uy, ϕ, x, y, constants, flilename)
-
+            # Lock file operations to prevent race conditions
+            lock(file_lock) do
+                savedata(ux, uy, ϕ, x, y, constants, flilename)
+            end
+        end
+        @info "Thread $(Threads.threadid()) completed ξ=$i in $t seconds"
     end
-
 end
 
 function openandplot()
 
-    for i in 0:6
+    for i in 0:5:30
 
         flilename = "simulation1_xi$(i).jld2"
         
@@ -128,6 +133,8 @@ function openandplot()
         animation_deformation(data["u_x"], data["u_y"], data["x"], data["y"], Int(data["constants"][7]), 30, "deformationrun1_xi$(i).mp4")
 
         animation_polarisation(data["ϕ"], data["x"], data["y"], Int(data["constants"][7]), 30, "polarisationrun1_xi$(i).mp4")
+
+        animation_heatmap(data["ϕ"], data["x"], data["y"], Int(data["constants"][7]), 30, "heatrun1_xi$(i).mp4")
 
     end
 
@@ -158,27 +165,27 @@ function circularmean_t(ϕ::Array{Float64, 3}, T)
 
 end
 
-function getendangel(N::Int, dy::Float64, dx::Float64, Lx::Int, Ly::Int, F::Float64, T::Int, dt::Float64, K::Float64, μ::Float64, λ::Float64, F_a::Float64, ξ::Float64 ,BC0::Bool)
+function getendangel(N::Int, dy::Float64, dx::Float64, Lx::Int, Ly::Int, F::Float64, T::Int, dt::Float64, K::Float64, μ::Float64, λ::Float64, F_a::Float64, ξ::Float64 ,BC0::Bool, filename::String)
 
- endangle = zeros(10)
+ endangle = zeros(200)
 
-    for i in 1:10
+    Threads.@threads for i in 1:200
 
-        @time ux, uy, ϕ, x, y, m, l, = run_activesystem(N, dy, dx, Lx, Ly, F, T, dt, K, μ, λ, F_a, ξ ,BC0)
+        t = @elapsed ux, uy, ϕ, x, y, m, l, = run_activesystem(N, dy, dx, Lx, Ly, F, T, dt, K, μ, λ, F_a, ξ ,BC0)
+        @info "Thread $(Threads.threadid()) iteration $i took $t seconds"
 
-        endangle[i] = circularmean(ϕ, T)
+        θ = circularmean(ϕ, T)
 
-        if endangle[i] < 0
+        # if θ < 0
 
-            endangle[i] += 2*π
+        #     θ += 2*π
 
-        end
+        # end
+
+        endangle[i] = θ
     end
         
 
-    return endangle
+    save(filename, Dict("endangle" => endangle))
 
 end
-
-
-
