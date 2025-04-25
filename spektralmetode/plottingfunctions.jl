@@ -1,5 +1,3 @@
-
-
 function animation_deformation(u_x, u_y, x, y, numiter, framerate, filename) 
 
     fig = Figure(size = (800, 800))
@@ -139,6 +137,41 @@ function plot_heatmap(u, x, y, name)
 
 end
 
+function plot_system_analysis(orderparameter::Vector{Float64}, max_velocity::Vector{Float64}, avg_velocity::Vector{Float64}, elastic_modes::Matrix{Float64}, polar_modes::Matrix{Float64}, T::Int, filename::String)
+    fig = Figure(size=(1200, 1000))
 
+    # Order parameter
+    ax1 = Axis(fig[1,1], title="Order Parameter")
+    lines!(ax1, 1:T, orderparameter)
+    ax1.xlabel = "Time"
+    ax1.ylabel = "Order Parameter"
 
+    # Velocity statistics
+    ax2 = Axis(fig[1,2], title="Velocity Statistics", yscale=log10)
+    lines!(ax2, 1:T, max_velocity, label="Max |dt_u|")
+    lines!(ax2, 1:T, avg_velocity, label="Avg |dt_u|")
+    axislegend(ax2)
+    ax2.xlabel = "Time"
+    ax2.ylabel = "Velocity"
 
+    # Elastic modes
+    ax3 = Axis(fig[2,1], title="Elastic Modes", yscale=log10)
+    for k in 1:size(elastic_modes, 1)
+        lines!(ax3, 1:T, elastic_modes[k,:], label="k=$(k-1)")
+    end
+    axislegend(ax3)
+    ax3.xlabel = "Time"
+    ax3.ylabel = "Mode Amplitude"
+
+    # Polarization modes
+    ax4 = Axis(fig[2,2], title="Polarization Modes", yscale=log10)
+    for k in 1:size(polar_modes, 1)
+        lines!(ax4, 1:T, polar_modes[k,:], label="k=$(k-1)")
+    end
+    axislegend(ax4)
+    ax4.xlabel = "Time"
+    ax4.ylabel = "Mode Amplitude"
+
+    save(filename, fig)
+    return fig
+end

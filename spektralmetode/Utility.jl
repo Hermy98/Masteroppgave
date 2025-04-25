@@ -1,4 +1,3 @@
-
 prefactor(L::Int, n::Int) = (2*π*n)/L
 
 
@@ -70,20 +69,23 @@ end
 
 function orderparameter(ϕ::Array{Float64, 3}, N_p, T)
 
-    orderparameter_t = zeros(Int(T))
+    orderparameter_t = zeros(Float64, T)
 
-    for t in 1:Int(T) 
+    for t in 1:T 
+       
+        nx = cos.(ϕ[:, :, t])
 
-        Px = sum(sum(row) for row in cos.(ϕ[:, :, t]))
+        ny = sin.(ϕ[:, :, t])
+    
+        nx_avg = sum(nx) / N_p
 
-        Py = sum(sum(row) for row in sin.(ϕ[:, :, t]))
-
-        orderparameter_t[t] = 1/N_p * sqrt(Px^2 + Py^2)
+        ny_avg = sum(ny) / N_p
+       
+        orderparameter_t[t] = sqrt(nx_avg^2 + ny_avg^2)
     end
 
-    
     return orderparameter_t
-      
+
 end
 
 
@@ -94,18 +96,18 @@ function savedata(u_x::Array{Float64, 3}, u_y::Array{Float64, 3}, ϕ::Array{Floa
 end
 
 function xisweep(N::Int, dy::Float64, dx::Float64, Lx::Int, Ly::Int, F::Float64, T::Int, dt::Float64, K::Float64, μ::Float64, λ::Float64, F_a::Float64, BC0::Bool)
-    # Create a lock for file operations
+    
     file_lock = ReentrantLock()
 
-    # Run simulations in parallel
-    Threads.@threads for i in 0:5:30
+    
+    Threads.@threads for i in 10:5:20
         t = @elapsed begin
             ux, uy, ϕ, x, y, m, l = run_activesystem(N, dy, dx, Lx, Ly, F, T, dt, K, μ, λ, F_a, Float64(i), BC0)
 
-            flilename = "simulation1_xi$(i).jld2"
+            flilename = "simulation2_xi$(i).jld2"
             constants = [N, m, l, Lx, Ly, F, T, dt, K, μ, λ, F_a, i]
 
-            # Lock file operations to prevent race conditions
+
             lock(file_lock) do
                 savedata(ux, uy, ϕ, x, y, constants, flilename)
             end
@@ -116,9 +118,9 @@ end
 
 function openandplot()
 
-    for i in 0:5:30
+    for i in 10:5:20
 
-        flilename = "simulation1_xi$(i).jld2"
+        flilename = "simulation2_xi$(i).jld2"
         
         data = load(flilename)
 
@@ -128,13 +130,13 @@ function openandplot()
 
         orderparameter_t = orderparameter(data["ϕ"], m*l, data["constants"][7])
 
-        plot_orderparameter(orderparameter_t, Int(data["constants"][7]), "orderparameterrun1_xi$(i).png")
+        plot_orderparameter(orderparameter_t, Int(data["constants"][7]), "orderparameterrun2_xi$(i).png")
 
-        animation_deformation(data["u_x"], data["u_y"], data["x"], data["y"], Int(data["constants"][7]), 30, "deformationrun1_xi$(i).mp4")
+        animation_deformation(data["u_x"], data["u_y"], data["x"], data["y"], Int(data["constants"][7]), 30, "deformationrun2_xi$(i).mp4")
 
-        animation_polarisation(data["ϕ"], data["x"], data["y"], Int(data["constants"][7]), 30, "polarisationrun1_xi$(i).mp4")
+        animation_polarisation(data["ϕ"], data["x"], data["y"], Int(data["constants"][7]), 30, "polarisationrun2_xi$(i).mp4")
 
-        animation_heatmap(data["ϕ"], data["x"], data["y"], Int(data["constants"][7]), 30, "heatrun1_xi$(i).mp4")
+        animation_heatmap(data["ϕ"], data["x"], data["y"], Int(data["constants"][7]), 30, "heatrun2_xi$(i).mp4")
 
     end
 
@@ -169,12 +171,18 @@ function getendangel(N::Int, dy::Float64, dx::Float64, Lx::Int, Ly::Int, F::Floa
 
  endangle = zeros(200)
 
+ startangle = zeros(200)
+
     Threads.@threads for i in 1:200
 
         t = @elapsed ux, uy, ϕ, x, y, m, l, = run_activesystem(N, dy, dx, Lx, Ly, F, T, dt, K, μ, λ, F_a, ξ ,BC0)
         @info "Thread $(Threads.threadid()) iteration $i took $t seconds"
 
         θ = circularmean(ϕ, T)
+
+        Θ = circularmean(ϕ, 2)
+
+        startangle[i] = Θ
 
         # if θ < 0
 
@@ -183,9 +191,43 @@ function getendangel(N::Int, dy::Float64, dx::Float64, Lx::Int, Ly::Int, F::Floa
         # end
 
         endangle[i] = θ
+        GC.gc()
     end
         
 
-    save(filename, Dict("endangle" => endangle))
+    save(filename, Dict("endangle" => endangle, "startangle" => startangle))z
 
+
+
+end
+
+function monitor_velocity(dt_u::Array{Float64, 3})
+    # Maximum absolute value
+    max_val = maximum(abs.(dt_u))
+    
+    # Average magnitude
+    avg_val = mean(sqrt.(dt_u[:,:,1].^2 + dt_u[:,:,2].^2))
+    
+    return max_val, avg_val
+end
+
+function monitor_fourier_modes(elcoefficientmatrix::Array{Float64, 3}, polarisationtioncoefficients::Array{Float64, 3})
+    N = size(elcoefficientmatrix, 3)  # N+1 modes
+    max_elastic = zeros(N)
+    max_polar = zeros(N)
+    
+    for k in 1:N
+        
+        # max_elastic[k] = sum(abs2.(view(elcoefficientmatrix, :, :, k)))
+
+        # max_polar[k] = sum(abs2.(view(polarisationtioncoefficients, :, :, k)))
+        
+        max_elastic[k] = sqrt(mean(abs2.(view(elcoefficientmatrix, :, :, k))))
+        max_polar[k] = sqrt(mean(abs2.(view(polarisationtioncoefficients, :, :, k))))
+    end
+
+    # max_elastic = max_elastic ./ sum(max_elastic[1])
+    # max_polar = max_polar ./ sum(max_polar[1])
+    
+    return max_elastic, max_polar
 end
