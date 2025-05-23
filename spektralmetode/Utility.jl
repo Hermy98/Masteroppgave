@@ -7,69 +7,13 @@ function prefactors(Lx::Int,N::Int)
 
 end
 
-function divergence(ux, uy, x, y, T, K , μ,  energy) #må skrives om for å sørge for at energien blir riktig
-
-    divergence_t = deepcopy(ux)
-
-    curl_t = deepcopy(ux)
-
-    if energy == true
-
-        defenergy_t = deepcopy(ux)
-
-    end
-
-    for i in 1:T
 
 
-        ux_spline = Spline2D(x, y, ux[:, :, i])
-
-        uy_spline = Spline2D(x, y, uy[:, :, i])
-
-        ux_deriv = derivative(ux_spline, x, y, nux = 1, nuy = 0)
-
-        uy_deriv = derivative(uy_spline, x, y, nux = 0, nuy = 1)
-
-        ux_yderiv = derivative(ux_spline, x, y, nux = 0, nuy = 1)
-
-        uy_xderiv = derivative(uy_spline, x, y, nux = 1, nuy = 0)
-
-        divergence_t[:, :, i] = ux_deriv + uy_deriv
-
-        curl_t[:, :, i] = (uy_xderiv - ux_yderiv)
-
-        
-
-
-        if energy == true
-
-            ux_yderiv = derivative(ux_spline, x, y, nux = 0, nuy = 1)
-
-            uy_xderiv = derivative(uy_spline, x, y, nux = 1, nuy = 0)
-
-            defenergy_t[:, :, i] = (1/2)* K * (ux_deriv + uy_deriv).^2 + μ *((1/2)*(ux_yderiv+uy_xderiv) - (ux_deriv + uy_deriv)).^2
-
-        end
-
-
-    end
-
-
-    if energy == true
-
-        return divergence_t, curl_t, defenergy_t
-
-    else
-
-        return divergence_t, curl_t
-
-    end
-
-end
-
-function orderparameter(ϕ::Array{Float64, 3}, N_p, T)
+function orderparameter(ϕ::Array{Float64, 3}, T)
 
     orderparameter_t = zeros(Float64, T)
+
+    points = size(ϕ, 1)*size(ϕ, 2)
 
     for t in 1:T 
        
@@ -77,9 +21,9 @@ function orderparameter(ϕ::Array{Float64, 3}, N_p, T)
 
         ny = sin.(ϕ[:, :, t])
     
-        nx_avg = sum(nx) / N_p
+        nx_avg = sum(nx) / points
 
-        ny_avg = sum(ny) / N_p
+        ny_avg = sum(ny) / points
        
         orderparameter_t[t] = sqrt(nx_avg^2 + ny_avg^2)
     end
@@ -95,52 +39,6 @@ function savedata(u_x::Array{Float64, 3}, u_y::Array{Float64, 3}, ϕ::Array{Floa
 
 end
 
-function xisweep(N::Int, dy::Float64, dx::Float64, Lx::Int, Ly::Int, F::Float64, T::Int, dt::Float64, K::Float64, μ::Float64, λ::Float64, F_a::Float64, BC0::Bool)
-    
-    file_lock = ReentrantLock()
-
-    
-    Threads.@threads for i in 10:5:20
-        t = @elapsed begin
-            ux, uy, ϕ, x, y, m, l = run_activesystem(N, dy, dx, Lx, Ly, F, T, dt, K, μ, λ, F_a, Float64(i), BC0)
-
-            flilename = "simulation2_xi$(i).jld2"
-            constants = [N, m, l, Lx, Ly, F, T, dt, K, μ, λ, F_a, i]
-
-
-            lock(file_lock) do
-                savedata(ux, uy, ϕ, x, y, constants, flilename)
-            end
-        end
-        @info "Thread $(Threads.threadid()) completed ξ=$i in $t seconds"
-    end
-end
-
-function openandplot()
-
-    for i in 10:5:20
-
-        flilename = "simulation2_xi$(i).jld2"
-        
-        data = load(flilename)
-
-        m = data["constants"][2]
-
-        l = data["constants"][3]
-
-        orderparameter_t = orderparameter(data["ϕ"], m*l, data["constants"][7])
-
-        plot_orderparameter(orderparameter_t, Int(data["constants"][7]), "orderparameterrun2_xi$(i).png")
-
-        animation_deformation(data["u_x"], data["u_y"], data["x"], data["y"], Int(data["constants"][7]), 30, "deformationrun2_xi$(i).mp4")
-
-        animation_polarisation(data["ϕ"], data["x"], data["y"], Int(data["constants"][7]), 30, "polarisationrun2_xi$(i).mp4")
-
-        animation_heatmap(data["ϕ"], data["x"], data["y"], Int(data["constants"][7]), 30, "heatrun2_xi$(i).mp4")
-
-    end
-
-end
 
 
 function circularmean(ϕ::Array{Float64, 3}, t)
@@ -230,4 +128,83 @@ function monitor_fourier_modes(elcoefficientmatrix::Array{Float64, 3}, polarisat
     # max_polar = max_polar ./ sum(max_polar[1])
     
     return max_elastic, max_polar
+end
+
+function velocity_calc(ux::Array{Float64, 3}, uy::Array{Float64, 3}, x::StepRangeLen, y::StepRangeLen, μ::Float64, K::Float64, ϕ::Array{Float64, 3}, F_a::Float64)
+    
+    dt_ux =  deepcopy(ux)
+
+    dt_uy = deepcopy(uy)
+
+    for i in 1:size(ux, 3)
+    
+        @views begin
+            ux_periodic = hcat(ux[:, end, i], ux[:, :, i], ux[:, 1, i])
+            uy_periodic = hcat(uy[:, end, i], uy[:, :, i], uy[:, 1, i])
+        end
+        
+        y_periodic = vcat(y[1] - 1, y, y[end] + 1)
+        
+    
+        @views begin
+            ux_spline = Spline2D(x, y_periodic, ux_periodic)
+            uy_spline = Spline2D(x, y_periodic, uy_periodic)
+            
+    
+            ux_xxderiv = similar(ux, size(ux, 1), size(ux, 2))
+            ux_yyderiv = similar(ux_xxderiv)
+            ux_xyderiv = similar(ux_xxderiv)
+            uy_xxderiv = similar(ux_xxderiv)
+            uy_yyderiv = similar(ux_xxderiv)
+            uy_xyderiv = similar(ux_xxderiv)
+            
+
+            ux_xxderiv = derivative(ux_spline, x, y_periodic, nux = 2, nuy = 0)[:, 2:end-1]
+            ux_yyderiv = derivative(ux_spline, x, y_periodic, nux = 0, nuy = 2)[:, 2:end-1]
+            uy_xxderiv = derivative(uy_spline, x, y_periodic, nux = 2, nuy = 0)[:, 2:end-1]
+            uy_yyderiv = derivative(uy_spline, x, y_periodic, nux = 0, nuy = 2)[:, 2:end-1]
+            
+            ux_xyderiv = derivative(ux_spline, x, y_periodic, nux = 1, nuy = 1)[:, 2:end-1]
+            uy_xyderiv = derivative(uy_spline, x, y_periodic, nux = 1, nuy = 1)[:, 2:end-1]
+        end
+        
+        @views begin
+            dt_ux[:, :, i] = μ * (ux_xxderiv + ux_yyderiv) + K * (ux_xxderiv + uy_xyderiv) + F_a*cos.(ϕ[:, :, i])
+            dt_uy[:, :, i] = μ * (uy_xxderiv + uy_yyderiv) + K * (ux_xyderiv + uy_yyderiv) + F_a*sin.(ϕ[:, :, i])
+        end
+    end
+    return dt_ux, dt_uy
+end
+
+function avg_velocity(ux::Array{Float64, 3}, uy::Array{Float64, 3}, x::StepRangeLen, y::StepRangeLen, μ::Float64, K::Float64, ϕ::Array{Float64, 3}, F_a::Float64)
+
+    avgvelocity = zeros(Float64, size(ux, 3))
+
+    dtux, dtuy = velocity_calc(ux, uy, x, y, μ, K, ϕ, F_a)
+
+    for i in 1:size(ux, 3)
+
+        avgvelocity[i] = mean(sqrt.(dtux[:, :, i].^2 + dtuy[:, :, i].^2))
+
+    end
+
+    return avgvelocity
+
+end
+
+
+function ϕ_dt(ϕ::Array{Float64, 3}, T::Int, Loggingstep::Int, l::Int, m::Int, dt::Float64)
+
+    t = T ÷ Loggingstep
+
+    ϕ_dt = zeros(Float64, t)
+
+    for i in 2:t
+
+        ϕ_dt[i] = (ϕ[floor(Int, l/2), floor(Int, m/2), i] - ϕ[floor(Int, l/2), floor(Int, m/2), i-1])/dt
+
+    end
+
+    return ϕ_dt
+
 end
